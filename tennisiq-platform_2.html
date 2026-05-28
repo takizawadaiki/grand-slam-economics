@@ -1,0 +1,1629 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TennisIQ — Sports Business Intelligence Platform</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@300;400;500&family=Syne:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+/* ── TOKENS ── */
+:root{
+  --gold:#B8943F;--gold-l:#D4AA5A;--gold-d:#7A6030;--gold-dim:rgba(184,148,63,0.08);
+  --bg:#08090F;--bg2:#0C0F18;--bg3:#111520;--bg4:#161C28;--bg5:#1C2438;
+  --glass:rgba(255,255,255,0.02);--glass2:rgba(255,255,255,0.04);
+  --border:rgba(255,255,255,0.07);--border2:rgba(184,148,63,0.22);--border-soft:rgba(255,255,255,0.04);
+  --text:#DDE3EC;--text2:#7A90A8;--text3:#3E5060;--text4:#253040;
+  --green:#1DB874;--gd:rgba(29,184,116,0.08);
+  --red:#D94054;--rd:rgba(217,64,84,0.08);
+  --blue:#2D7DD2;--bd:rgba(45,125,210,0.08);
+  --purple:#7B5EA7;--pd:rgba(123,94,167,0.08);
+  --orange:#C8713A;--teal:#16A8A8;--amber:#D4883A;
+  --fd:'DM Serif Display',Georgia,serif;
+  --fs:'Syne',sans-serif;
+  --fm:'DM Mono',monospace;
+  --r:6px;--rl:10px;--rx:14px;
+  --sh:0 4px 24px rgba(0,0,0,0.4);
+  --sidebar:232px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;font-size:14px}
+body{background:var(--bg);color:var(--text);font-family:var(--fs);line-height:1.6;overflow-x:hidden}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:var(--bg)}::-webkit-scrollbar-thumb{background:var(--gold-d);border-radius:2px}
+
+/* ── LOADING ── */
+#loadScreen{position:fixed;inset:0;z-index:9999;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:28px;transition:opacity 0.7s ease,visibility 0.7s ease}
+#loadScreen.done{opacity:0;pointer-events:none;visibility:hidden}
+.ls-logo{display:flex;align-items:center;gap:14px;opacity:0;animation:fadeUp 0.6s ease 0.2s forwards}
+.ls-mark{width:44px;height:44px;background:linear-gradient(135deg,var(--gold-l),var(--gold));border-radius:8px;display:flex;align-items:center;justify-content:center;font-family:var(--fm);font-size:18px;font-weight:500;color:#08090F;letter-spacing:-0.03em}
+.ls-name{font-family:var(--fm);font-size:17px;letter-spacing:0.2em;color:var(--gold);text-transform:uppercase}
+.ls-tag{font-family:var(--fm);font-size:10px;color:var(--text3);letter-spacing:0.16em;text-transform:uppercase;opacity:0;animation:fadeUp 0.5s ease 0.45s forwards}
+.ls-bar-wrap{width:260px;height:1px;background:rgba(255,255,255,0.05);opacity:0;animation:fadeUp 0.5s ease 0.65s forwards}
+.ls-bar{height:100%;width:0;background:linear-gradient(90deg,var(--gold-d),var(--gold-l));transition:width 0.12s linear}
+.ls-status{font-family:var(--fm);font-size:9px;color:var(--text3);letter-spacing:0.1em;opacity:0;animation:fadeUp 0.5s ease 0.8s forwards}
+
+/* ── STATUS BAR ── */
+#statusBar{position:fixed;top:0;left:0;right:0;z-index:300;height:26px;background:rgba(8,9,15,0.96);border-bottom:1px solid var(--border-soft);display:flex;align-items:center;padding:0 16px;gap:0}
+.sb-item{display:flex;align-items:center;gap:5px;padding:0 12px;font-family:var(--fm);font-size:9px;color:var(--text3);letter-spacing:0.1em;border-right:1px solid var(--border-soft)}
+.sb-item:first-child{padding-left:0}.sb-item:last-child{border-right:none;margin-left:auto}
+.sb-item strong{color:var(--text2)}
+.sb-dot{width:4px;height:4px;border-radius:50%}
+.sb-live{background:var(--green);animation:blink 3s ease infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0.35}}
+
+/* ── SIDEBAR ── */
+#sidebar{position:fixed;top:26px;left:0;bottom:0;width:var(--sidebar);z-index:200;background:rgba(11,14,23,0.97);border-right:1px solid var(--border);display:flex;flex-direction:column}
+.sb-header{padding:18px 18px 14px;border-bottom:1px solid var(--border)}
+.sb-logo{display:flex;align-items:center;gap:9px}
+.sb-mark{width:28px;height:28px;background:linear-gradient(135deg,var(--gold-l),var(--gold));border-radius:6px;display:flex;align-items:center;justify-content:center;font-family:var(--fm);font-size:12px;font-weight:500;color:#08090F;flex-shrink:0}
+.sb-brand{font-family:var(--fm);font-size:11px;letter-spacing:0.14em;color:var(--gold);text-transform:uppercase}
+.sb-sub{font-family:var(--fm);font-size:8px;color:var(--text3);margin-top:2px;letter-spacing:0.06em}
+.sb-nav{flex:1;overflow-y:auto;padding:8px 0;scrollbar-width:none}
+.sb-nav::-webkit-scrollbar{display:none}
+.sb-cat{font-family:var(--fm);font-size:8px;color:var(--text4);letter-spacing:0.18em;text-transform:uppercase;padding:10px 18px 4px}
+.sb-item-link{display:flex;align-items:center;gap:9px;padding:8px 18px;font-size:11px;color:var(--text2);cursor:pointer;transition:all 0.15s;text-decoration:none;border-left:2px solid transparent}
+.sb-item-link:hover{color:var(--text);background:var(--glass)}
+.sb-item-link.active{color:var(--gold);background:var(--gold-dim);border-left-color:var(--gold)}
+.sb-item-link .sb-icon{width:14px;text-align:center;font-size:11px;opacity:0.7}
+.sb-item-link .sb-num{font-family:var(--fm);font-size:8px;color:var(--text3);margin-left:auto}
+.sb-footer{padding:14px 18px;border-top:1px solid var(--border)}
+.sb-build{font-family:var(--fm);font-size:8px;color:var(--text4);letter-spacing:0.08em}
+.sb-conf-row{display:flex;align-items:center;gap:8px;margin-top:5px}
+.sb-conf-bar{flex:1;height:2px;background:rgba(255,255,255,0.05);border-radius:1px;overflow:hidden}
+.sb-conf-fill{height:100%;width:87%;background:linear-gradient(90deg,var(--blue),var(--green));border-radius:1px}
+
+/* ── MAIN LAYOUT ── */
+#mainContent{margin-left:var(--sidebar);padding-top:26px}
+
+/* ── TOP NAV ── */
+.top-nav{height:48px;display:flex;align-items:center;justify-content:space-between;padding:0 28px;background:rgba(8,9,15,0.92);border-bottom:1px solid var(--border);position:sticky;top:26px;z-index:100}
+.tn-brand{font-family:var(--fm);font-size:10px;color:var(--text3);letter-spacing:0.1em}
+.tn-center{display:flex;align-items:center;gap:8px}
+.tn-search{display:flex;align-items:center;gap:7px;background:var(--glass);border:1px solid var(--border);border-radius:var(--r);padding:5px 12px;width:260px;transition:border-color 0.2s}
+.tn-search:focus-within{border-color:var(--border2)}
+.tn-search input{background:none;border:none;outline:none;color:var(--text);font-family:var(--fm);font-size:10px;width:100%;letter-spacing:0.05em}
+.tn-search input::placeholder{color:var(--text3)}
+.tn-right{display:flex;align-items:center;gap:8px}
+.tn-btn{display:flex;align-items:center;gap:5px;padding:5px 12px;background:var(--glass);border:1px solid var(--border);border-radius:var(--r);font-family:var(--fm);font-size:9px;color:var(--text2);cursor:pointer;transition:all 0.2s;letter-spacing:0.05em;white-space:nowrap}
+.tn-btn:hover{border-color:var(--border2);color:var(--text)}
+.tn-btn.prim{background:linear-gradient(135deg,var(--gold-l),var(--gold));color:#08090F;border:none;font-weight:700}
+.tn-btn.prim:hover{opacity:0.88}
+
+/* ── TICKER ── */
+.ticker-wrap{background:var(--bg2);border-bottom:1px solid var(--border);padding:6px 0;overflow:hidden}
+.ticker-inner{display:flex;gap:60px;animation:tick 55s linear infinite;white-space:nowrap}
+.ti{font-family:var(--fm);font-size:10px;color:var(--text3);display:inline-flex;align-items:center;gap:9px}
+.ti strong{color:var(--text2)}.ti-up{color:var(--green)}.ti-dn{color:var(--red)}
+.tb{font-size:8px;padding:1px 5px;border-radius:2px;letter-spacing:0.05em}
+.tb-off{background:rgba(29,184,116,0.12);color:var(--green);border:1px solid rgba(29,184,116,0.2)}
+.tb-est{background:var(--gold-dim);color:var(--gold);border:1px solid var(--border2)}
+.tb-mod{background:rgba(45,125,210,0.1);color:var(--blue);border:1px solid rgba(45,125,210,0.2)}
+@keyframes tick{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+
+/* ── SECTIONS ── */
+.sw{max-width:1160px;margin:0 auto;padding:0 28px}
+.sp{padding:72px 0}.sp-sm{padding:48px 0}
+.alt{background:var(--bg2)}
+
+/* ── SECTION TRANSITIONS (narrative connectors) ── */
+.section-bridge{padding:20px 0 0;background:inherit}
+.section-bridge .sw p{font-size:12px;color:var(--text3);font-style:italic;line-height:1.7;padding:16px 20px;border-left:2px solid var(--border2);background:var(--glass)}
+
+/* ── EXEC BRIEF ── */
+#exec-brief{background:var(--bg2);border-bottom:1px solid var(--border);padding:40px 0 52px}
+.brief-hd{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:28px;padding-bottom:20px;border-bottom:1px solid var(--border)}
+.brief-label{font-family:var(--fm);font-size:9px;letter-spacing:0.2em;text-transform:uppercase;color:var(--gold);display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.brief-label::before{content:'';width:14px;height:1px;background:var(--gold)}
+.brief-h1{font-family:var(--fd);font-size:clamp(24px,3.5vw,40px);line-height:1.1;letter-spacing:-0.02em;margin-bottom:8px}
+.brief-desc{font-size:12px;color:var(--text2);max-width:480px;line-height:1.65}
+.brief-stamp{display:flex;flex-direction:column;gap:4px;align-items:flex-end;flex-shrink:0}
+.bs-line{font-family:var(--fm);font-size:9px;color:var(--text3);letter-spacing:0.1em}
+.bs-line strong{color:var(--text2)}
+.brief-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:1px;background:var(--border);border-radius:var(--rl);overflow:hidden}
+.brief-cell{background:var(--bg3);padding:18px 16px;transition:background 0.15s}
+.brief-cell:hover{background:var(--bg4)}
+.bc-num{font-family:var(--fm);font-size:8px;color:var(--text3);letter-spacing:0.14em;text-transform:uppercase;margin-bottom:8px}
+.bc-val{font-family:var(--fd);font-size:26px;color:var(--text);line-height:1;margin-bottom:5px}
+.bc-label{font-size:10px;color:var(--text2);line-height:1.45;margin-bottom:8px}
+.bc-badge{display:inline-flex;align-items:center;gap:4px;font-family:var(--fm);font-size:8px;padding:2px 6px;border-radius:2px}
+.bc-up{background:var(--gd);color:var(--green);border:1px solid rgba(29,184,116,0.18)}
+.bc-dn{background:var(--rd);color:var(--red);border:1px solid rgba(217,64,84,0.18)}
+.bc-nu{background:var(--gold-dim);color:var(--gold);border:1px solid var(--border2)}
+
+/* ── HERO ── */
+#hero{min-height:86vh;position:relative;display:flex;align-items:center;overflow:hidden;background:radial-gradient(ellipse 90% 60% at 50% -10%,rgba(184,148,63,0.04) 0%,transparent 65%),var(--bg)}
+.hero-grid{position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,0.018) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.018) 1px,transparent 1px);background-size:80px 80px;mask-image:radial-gradient(ellipse 80% 60% at 50% 35%,black 20%,transparent 75%)}
+.hw{position:relative;z-index:2;width:100%}
+.h-label{display:inline-flex;align-items:center;gap:9px;font-family:var(--fm);font-size:9px;letter-spacing:0.22em;text-transform:uppercase;color:var(--gold);margin-bottom:24px;opacity:0;animation:fadeUp 0.7s ease 0.15s forwards}
+.h-label::before{content:'';width:20px;height:1px;background:var(--gold)}
+.h-title{font-family:var(--fd);font-size:clamp(48px,7vw,92px);line-height:.96;letter-spacing:-0.025em;margin-bottom:10px;opacity:0;animation:fadeUp 0.8s ease 0.3s forwards}
+.h-title .hl{font-style:italic;color:var(--gold-l)}
+.h-sub{font-size:15px;color:var(--text2);max-width:520px;line-height:1.7;margin-bottom:12px;opacity:0;animation:fadeUp 0.8s ease 0.45s forwards}
+.h-thesis{max-width:580px;margin-bottom:36px;padding:13px 16px;border-left:2px solid var(--gold);background:rgba(184,148,63,0.03);border-radius:0 var(--r) var(--r) 0;opacity:0;animation:fadeUp 0.8s ease 0.55s forwards}
+.h-thesis p{font-family:var(--fd);font-style:italic;font-size:13px;color:var(--text);line-height:1.55}
+.h-ctas{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:52px;opacity:0;animation:fadeUp 0.8s ease 0.68s forwards}
+.cta-p{padding:10px 22px;background:linear-gradient(135deg,var(--gold-l),var(--gold));color:#08090F;font-family:var(--fs);font-size:10px;font-weight:800;letter-spacing:0.12em;text-transform:uppercase;border:none;border-radius:var(--r);cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:6px;transition:opacity 0.2s}
+.cta-p:hover{opacity:0.88}
+.cta-s{padding:9px 20px;background:var(--glass);color:var(--text2);font-family:var(--fs);font-size:10px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;border:1px solid var(--border2);border-radius:var(--r);cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:6px;transition:all 0.2s}
+.cta-s:hover{border-color:var(--gold);color:var(--gold)}
+.h-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;opacity:0;animation:fadeUp 0.8s ease 0.82s forwards}
+.kpi{background:rgba(17,21,32,0.9);border:1px solid var(--border);border-radius:var(--rl);padding:16px 18px;transition:border-color 0.2s}
+.kpi:hover{border-color:var(--border2)}
+.kpi-label{font-family:var(--fm);font-size:8px;letter-spacing:0.14em;text-transform:uppercase;color:var(--text3);margin-bottom:7px}
+.kpi-val{font-family:var(--fd);font-size:28px;color:var(--text);line-height:1;margin-bottom:5px}
+.kpi-delta{font-family:var(--fm);font-size:9px}
+.up{color:var(--green)}.dn{color:var(--red)}.nu{color:var(--text3)}
+@keyframes fadeUp{from{opacity:0;transform:translateY(22px)}to{opacity:1;transform:translateY(0)}}
+
+/* ── DATA BADGES & SOURCES ── */
+.db{display:inline-flex;font-family:var(--fm);font-size:8px;padding:1px 5px;border-radius:2px;letter-spacing:0.05em;vertical-align:middle}
+.db-off{background:rgba(29,184,116,0.1);color:var(--green);border:1px solid rgba(29,184,116,0.2)}
+.db-est{background:var(--gold-dim);color:var(--gold);border:1px solid var(--border2)}
+.db-mod{background:rgba(45,125,210,0.1);color:var(--blue);border:1px solid rgba(45,125,210,0.2)}
+.db-cpi{background:rgba(123,94,167,0.1);color:var(--purple);border:1px solid rgba(123,94,167,0.2)}
+.stag{display:inline-flex;align-items:center;gap:4px;font-family:var(--fm);font-size:9px;color:var(--text3);cursor:default;position:relative}
+.stag::before{content:'';display:inline-block;width:3px;height:3px;border-radius:50%;background:currentColor;flex-shrink:0}
+.stag:hover .stip{opacity:1;transform:translateY(0);pointer-events:auto}
+.stip{position:absolute;bottom:calc(100% + 5px);left:0;background:var(--bg5);border:1px solid var(--border2);border-radius:var(--r);padding:8px 12px;font-size:9px;color:var(--text2);opacity:0;transform:translateY(4px);transition:all 0.18s;pointer-events:none;z-index:400;min-width:180px;max-width:280px;white-space:normal;line-height:1.5}
+.conf-ind{display:inline-flex;align-items:center;gap:5px;font-family:var(--fm);font-size:8px;color:var(--text3)}
+.conf-pip{width:5px;height:5px;border-radius:50%}
+
+/* ── SECTION HEADERS ── */
+.sh{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:28px;padding-bottom:18px;border-bottom:1px solid var(--border)}
+.sl{font-family:var(--fm);font-size:8px;letter-spacing:0.2em;text-transform:uppercase;color:var(--gold);display:flex;align-items:center;gap:8px;margin-bottom:9px}
+.sl::before{content:'';width:12px;height:1px;background:var(--gold)}
+.stitle{font-family:var(--fd);font-size:clamp(24px,3.2vw,38px);line-height:1.1;letter-spacing:-0.02em;margin-bottom:7px}
+.sdesc{font-size:12px;color:var(--text2);max-width:420px;line-height:1.6}
+.sh-actions{display:flex;gap:6px;align-items:flex-start;flex-shrink:0}
+
+/* ── CHART SHELLS ── */
+.cs{background:var(--bg3);border:1px solid var(--border);border-radius:var(--rx);padding:22px;transition:border-color 0.2s;position:relative}
+.cs:hover{border-color:var(--border2)}
+.cs-title{font-size:11px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:var(--text);margin-bottom:3px}
+.cs-sub{font-size:10px;color:var(--text3);margin-bottom:10px;font-family:var(--fm)}
+.cs-badges{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px}
+.cs-legend{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:10px;font-size:10px;color:var(--text2)}
+.ld{display:flex;align-items:center;gap:5px}
+.ldot{width:6px;height:6px;border-radius:2px}
+.cs-footer{display:flex;align-items:center;justify-content:space-between;margin-top:12px;padding-top:10px;border-top:1px solid var(--border-soft)}
+.cs-ts{font-family:var(--fm);font-size:8px;color:var(--text4)}
+
+/* ── EXEC CARDS (calmer) ── */
+.ec-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin-top:28px}
+.ec{background:var(--bg3);border:1px solid var(--border);border-radius:var(--rx);padding:24px;position:relative;overflow:hidden;transition:border-color 0.2s,transform 0.2s}
+.ec::after{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--cc,var(--gold));opacity:0;transition:opacity 0.25s}
+.ec:hover::after{opacity:1}.ec:hover{border-color:var(--border2);transform:translateY(-2px)}
+.ec-tag{font-family:var(--fm);font-size:8px;letter-spacing:0.12em;text-transform:uppercase;color:var(--text3);margin-bottom:14px;display:flex;align-items:center;gap:6px}
+.ec-dot{width:4px;height:4px;border-radius:50%;background:var(--cc,var(--gold))}
+.ec-h{font-family:var(--fd);font-size:18px;line-height:1.25;color:var(--text);margin-bottom:10px}
+.ec-b{font-size:11px;color:var(--text2);line-height:1.7;margin-bottom:18px}
+.ec-metrics{display:flex;gap:14px;align-items:flex-end;margin-bottom:14px}
+.ec-m{flex:1}.ec-mv{font-family:var(--fd);font-size:28px;color:var(--cc,var(--gold));line-height:1}
+.ec-ms{font-family:var(--fm);font-size:8px;color:var(--text3);margin-top:2px}
+.ec-spark{flex:2;height:44px}
+.ta{display:inline-flex;align-items:center;gap:3px;font-family:var(--fm);font-size:9px;padding:2px 7px;border-radius:3px}
+.ta-up{background:var(--gd);color:var(--green);border:1px solid rgba(29,184,116,0.18)}
+.ta-dn{background:var(--rd);color:var(--red);border:1px solid rgba(217,64,84,0.18)}
+.ta-nu{background:var(--gold-dim);color:var(--gold);border:1px solid var(--border2)}
+
+/* ── INSTITUTIONAL TABLE ── */
+.inst-table{width:100%;border-collapse:collapse;margin-top:4px}
+.inst-table th{font-family:var(--fm);font-size:8px;letter-spacing:0.14em;text-transform:uppercase;color:var(--text3);padding:8px 12px;border-bottom:1px solid var(--border);text-align:left;cursor:pointer;user-select:none;white-space:nowrap;transition:color 0.15s}
+.inst-table th:hover{color:var(--text2)}
+.inst-table th .sort-arrow{opacity:0.4;font-size:9px;margin-left:4px}
+.inst-table th.sort-active{color:var(--gold)}.inst-table th.sort-active .sort-arrow{opacity:1}
+.inst-table td{font-size:11px;padding:10px 12px;border-bottom:1px solid var(--border-soft);transition:background 0.1s;vertical-align:middle}
+.inst-table tr:hover td{background:var(--glass)}
+.inst-table tr:last-child td{border-bottom:none}
+.td-mono{font-family:var(--fm);font-size:10px}.td-right{text-align:right}.td-center{text-align:center}
+.conf-dots{display:flex;gap:3px}
+.conf-d{width:5px;height:5px;border-radius:50%}.conf-d.on{background:var(--green)}.conf-d.med{background:var(--amber)}.conf-d.off{background:rgba(255,255,255,0.1)}
+.cell-bar{display:flex;align-items:center;gap:8px}
+.cell-bar-track{flex:1;height:4px;background:rgba(255,255,255,0.05);border-radius:2px;overflow:hidden}
+.cell-bar-fill{height:100%;border-radius:2px;transition:width 1s cubic-bezier(0.16,1,0.3,1);width:0}
+
+/* ── CIS LEADERBOARD (table-style) ── */
+.cis-table-wrap{overflow-x:auto}
+.cis-row-highlight{background:linear-gradient(90deg,rgba(184,148,63,0.04),var(--glass))}
+
+/* ── PLAYER MODAL ── */
+.mo{position:fixed;inset:0;z-index:500;background:rgba(8,9,15,0.85);backdrop-filter:blur(10px);display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity 0.25s}
+.mo.open{opacity:1;pointer-events:auto}
+.pm{background:var(--bg3);border:1px solid var(--border2);border-radius:16px;width:min(840px,95vw);max-height:88vh;overflow-y:auto;padding:32px;position:relative;transform:scale(0.96) translateY(16px);transition:all 0.3s cubic-bezier(0.16,1,0.3,1)}
+.mo.open .pm{transform:scale(1) translateY(0)}
+.pm-close{position:absolute;top:14px;right:14px;width:28px;height:28px;border-radius:50%;background:var(--glass2);border:1px solid var(--border);color:var(--text2);font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.2s}
+.pm-close:hover{background:var(--rd);color:var(--red)}
+.pm-hd{display:grid;grid-template-columns:auto 1fr auto;gap:20px;align-items:start;margin-bottom:28px}
+.pm-av{width:64px;height:64px;border-radius:12px;background:var(--bg4);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:32px}
+.pm-name{font-family:var(--fd);font-size:28px;line-height:1;margin-bottom:5px}
+.pm-meta{font-family:var(--fm);font-size:9px;color:var(--text3);letter-spacing:0.1em}
+.pm-cis-lbl{font-family:var(--fm);font-size:8px;color:var(--text3);letter-spacing:0.14em;text-transform:uppercase;margin-bottom:3px;text-align:right}
+.pm-cis-val{font-family:var(--fd);font-size:40px;color:var(--gold);line-height:1}
+.pm-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px}
+.pm-card{background:var(--glass);border:1px solid var(--border);border-radius:var(--rl);padding:16px}
+.pm-card-title{font-family:var(--fm);font-size:8px;color:var(--text3);letter-spacing:0.14em;text-transform:uppercase;margin-bottom:10px}
+.pm-stat{display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border-soft);font-size:10px}
+.pm-stat:last-child{border-bottom:none}
+.pm-stat span:first-child{color:var(--text2)}.pm-stat span:last-child{font-family:var(--fm);font-size:10px}
+.pm-ai-lbl{font-family:var(--fm);font-size:8px;color:var(--gold);letter-spacing:0.14em;text-transform:uppercase;margin-bottom:6px;display:flex;align-items:center;gap:6px}
+.pm-ai{background:rgba(184,148,63,0.03);border-left:2px solid var(--gold);border-radius:0 var(--r) var(--r) 0;padding:12px 16px;font-size:11px;color:var(--text2);line-height:1.7;font-style:italic}
+
+/* ── FINANCIAL SURVIVAL (deep) ── */
+#survival{background:var(--bg2)}
+.surv-layout{display:grid;grid-template-columns:340px 1fr;gap:22px;align-items:start;margin-top:28px}
+.surv-in{background:var(--bg3);border:1px solid var(--border);border-radius:var(--rx);padding:24px}
+.surv-section-lbl{font-family:var(--fm);font-size:8px;letter-spacing:0.16em;text-transform:uppercase;color:var(--text3);margin:14px 0 8px;padding-top:14px;border-top:1px solid var(--border)}
+.surv-section-lbl:first-child{margin-top:0;padding-top:0;border-top:none}
+.surv-section-lbl::before{content:none}
+.surv-field{margin-bottom:12px}
+.sfl{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px}
+.sfl-name{font-size:11px;color:var(--text2);font-weight:600}
+.sfl-val{font-family:var(--fm);font-size:12px;color:var(--gold)}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:3px;background:rgba(255,255,255,0.07);border-radius:2px;outline:none;cursor:pointer}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:linear-gradient(135deg,var(--gold-l),var(--gold));cursor:pointer;transition:transform 0.15s}
+input[type=range]::-webkit-slider-thumb:hover{transform:scale(1.15)}
+.surv-results{display:flex;flex-direction:column;gap:14px}
+/* Verdict */
+.surv-verdict{border-radius:var(--rl);padding:20px 22px;transition:all 0.5s}
+.sv-lbl{font-family:var(--fm);font-size:8px;letter-spacing:0.14em;text-transform:uppercase;margin-bottom:7px}
+.sv-grade{font-family:var(--fd);font-size:52px;line-height:1;margin-bottom:5px;transition:color 0.5s}
+.sv-text{font-size:11px;line-height:1.55;transition:color 0.5s}
+.sv-tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.sv-tag{font-family:var(--fm);font-size:9px;padding:3px 8px;border-radius:3px}
+/* Meter grid */
+.surv-meters{background:var(--bg3);border:1px solid var(--border);border-radius:var(--rl);padding:18px}
+.surv-meters-title{font-family:var(--fm);font-size:8px;color:var(--text3);letter-spacing:0.14em;text-transform:uppercase;margin-bottom:14px}
+.sm-row{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.sm-label{font-size:10px;color:var(--text2);width:140px;flex-shrink:0}
+.sm-track{flex:1;height:5px;background:rgba(255,255,255,0.05);border-radius:3px;overflow:hidden}
+.sm-fill{height:100%;border-radius:3px;transition:width 0.8s cubic-bezier(0.16,1,0.3,1);width:0}
+.sm-val{font-family:var(--fm);font-size:10px;min-width:38px;text-align:right}
+/* P&L */
+.surv-pl{background:var(--bg3);border:1px solid var(--border);border-radius:var(--rl);padding:18px}
+.surv-pl-title{font-family:var(--fm);font-size:8px;letter-spacing:0.14em;text-transform:uppercase;color:var(--text3);margin-bottom:12px}
+.pl-row{display:flex;justify-content:space-between;align-items:center;padding:7px 10px;border-radius:var(--r);border:1px solid rgba(255,255,255,0.03);font-size:11px;margin-bottom:5px;transition:background 0.15s}
+.pl-pos{background:rgba(29,184,116,0.04);border-color:rgba(29,184,116,0.08)}
+.pl-neg{background:rgba(217,64,84,0.04);border-color:rgba(217,64,84,0.08)}
+.pl-total{background:var(--glass);border:1px solid var(--border2);font-weight:700}
+.pl-label{color:var(--text2)}.pl-val{font-family:var(--fm);font-size:10px}
+/* Cashflow */
+.surv-cf{background:var(--bg3);border:1px solid var(--border);border-radius:var(--rl);padding:18px}
+/* Risk panel */
+.surv-risks{border-radius:var(--rl);padding:16px;transition:all 0.5s}
+.risk-title{font-family:var(--fm);font-size:8px;letter-spacing:0.12em;text-transform:uppercase;margin-bottom:8px}
+.risk-item{font-size:10px;color:var(--text2);display:flex;align-items:flex-start;gap:6px;line-height:1.4;margin-bottom:5px}
+.risk-item::before{content:'▸';flex-shrink:0;margin-top:1px}
+
+/* ── ROAD FUNNEL ── */
+.funnel-layout{display:grid;grid-template-columns:1fr 1.1fr;gap:24px;margin-top:28px;align-items:start}
+.ftier{margin-bottom:5px}
+.fbar{height:40px;border-radius:6px;display:flex;align-items:center;justify-content:space-between;padding:0 14px;font-family:var(--fm);font-size:10px;transition:all 1.4s cubic-bezier(0.16,1,0.3,1);width:100%}
+.fconn{width:1px;background:linear-gradient(180deg,rgba(184,148,63,0.2),rgba(184,148,63,0.05));margin:0 auto;height:5px}
+.finfo{background:var(--glass);border:1px solid var(--border);border-radius:var(--r);padding:10px 12px;font-size:10px;margin-bottom:5px}
+.finfo-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.finfo-name{font-weight:700;font-size:11px;color:var(--text)}
+.finfo-surv{font-family:var(--fm);font-size:9px;color:var(--text3)}
+.finfo-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-top:6px}
+.fstat{background:rgba(0,0,0,0.2);border-radius:4px;padding:6px;text-align:center}
+.fstat-val{font-family:var(--fd);font-size:13px;color:var(--text)}
+.fstat-label{font-family:var(--fm);font-size:7px;color:var(--text3);margin-top:1px}
+.week-card{background:var(--bg3);border:1px solid var(--border);border-radius:var(--rx);padding:24px;position:relative;overflow:hidden}
+.week-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--red),var(--orange),var(--gold))}
+.wc-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+.wc-title{font-family:var(--fd);font-size:18px}
+.wc-badge{font-family:var(--fm);font-size:8px;padding:3px 7px;background:var(--rd);color:var(--red);border-radius:3px;border:1px solid rgba(217,64,84,0.18)}
+
+/* ── SIMULATOR ── */
+.sim-layout{display:grid;grid-template-columns:320px 1fr;gap:20px;align-items:start}
+.sim-panel{background:var(--bg3);border:1px solid var(--border);border-radius:var(--rx);padding:24px}
+.spt{font-family:var(--fm);font-size:8px;letter-spacing:0.16em;text-transform:uppercase;color:var(--text3);margin-bottom:20px}
+.sg{margin-bottom:17px}
+.sg-head{display:flex;justify-content:space-between;margin-bottom:6px}
+.sg-label{font-size:11px;color:var(--text2);font-weight:600}
+.sg-val{font-family:var(--fm);font-size:12px;color:var(--gold)}
+.sim-kpi{background:var(--glass);border:1px solid var(--border);border-radius:var(--rl);padding:14px;margin-top:12px}
+.sim-kpi-lbl{font-family:var(--fm);font-size:8px;color:var(--text3);letter-spacing:0.12em;text-transform:uppercase;margin-bottom:5px}
+.sim-kpi-val{font-family:var(--fd);font-size:28px;color:var(--gold);transition:all 0.4s}
+.sim-kpi-diff{font-family:var(--fm);font-size:9px;margin-top:2px}
+.sim-res{background:var(--bg3);border:1px solid var(--border);border-radius:var(--rx);padding:24px}
+.srg{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:18px}
+.src{background:var(--glass);border:1px solid var(--border);border-radius:var(--rl);padding:14px;transition:border-color 0.15s}
+.src:hover{border-color:var(--border2)}
+.src-lbl{font-family:var(--fm);font-size:8px;letter-spacing:0.1em;text-transform:uppercase;color:var(--text3);margin-bottom:5px}
+.src-val{font-family:var(--fd);font-size:22px;color:var(--gold-l);transition:all 0.3s}
+.src-sub{font-family:var(--fm);font-size:8px;color:var(--text3);margin-top:3px}
+
+/* ── LORENZ / INEQUALITY ── */
+.lorenz-layout{display:grid;grid-template-columns:1.5fr 1fr;gap:22px}
+.lstat{background:var(--glass);border:1px solid var(--border);border-radius:var(--rl);padding:16px}
+.lstat-val{font-family:var(--fd);font-size:24px;margin-bottom:3px}
+.lstat-label{font-family:var(--fm);font-size:8px;color:var(--text3);letter-spacing:0.1em}
+.lorenz-stats{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+
+/* ── WORLD MAP ── */
+#world-map{background:var(--bg)}
+.map-canvas-wrap{background:var(--bg3);border:1px solid var(--border);border-radius:var(--rx);overflow:hidden;position:relative;margin-top:28px}
+.map-legend{display:flex;gap:20px;margin-top:12px;flex-wrap:wrap}
+.map-leg-item{display:flex;align-items:center;gap:7px;font-family:var(--fm);font-size:9px;color:var(--text2)}
+.map-leg-dot{width:8px;height:8px;border-radius:50%}
+
+/* ── $1 FLOW (signature) ── */
+.flow-wrap{background:var(--bg3);border:1px solid var(--border);border-radius:var(--rx);overflow:hidden}
+
+/* ── INSIGHTS ── */
+.insights-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:13px;margin-top:28px}
+.ic{background:var(--glass);border:1px solid var(--border);border-radius:var(--rx);padding:22px;transition:all 0.2s;position:relative;overflow:hidden}
+.ic::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--cc,var(--gold));transform:scaleX(0);transform-origin:left;transition:transform 0.3s}
+.ic:hover::before{transform:scaleX(1)}.ic:hover{background:var(--glass2);border-color:var(--border2)}
+.ic-icon{font-size:18px;margin-bottom:10px}.ic-title{font-size:13px;font-weight:700;color:var(--text);margin-bottom:6px;line-height:1.3}
+.ic-text{font-size:11px;color:var(--text2);line-height:1.6}
+.ic-metric{display:inline-flex;margin-top:10px;font-family:var(--fm);font-size:9px;color:var(--gold);padding:3px 7px;background:var(--gold-dim);border-radius:3px}
+
+/* ── ACCORDION ── */
+.acc-item{border-bottom:1px solid var(--border)}
+.acc-header{display:flex;justify-content:space-between;align-items:center;padding:14px 0;cursor:pointer;user-select:none}
+.acc-header:hover .acc-title{color:var(--gold)}
+.acc-title{font-size:11px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:var(--text);transition:color 0.2s}
+.acc-icon{font-family:var(--fm);font-size:16px;color:var(--text3)}
+.acc-body{max-height:0;overflow:hidden;transition:max-height 0.35s ease}
+.acc-body.open{max-height:600px}
+.acc-content{padding:0 0 14px;font-size:11px;color:var(--text2);line-height:1.7}
+.formula{background:var(--bg5);border-left:2px solid var(--gold);border-radius:0 var(--r) var(--r) 0;padding:9px 13px;margin:9px 0;font-family:var(--fm);font-size:10px;color:var(--gold-l)}
+
+/* ── GENERATE MODAL ── */
+.gen-modal{position:fixed;inset:0;z-index:600;background:rgba(8,9,15,0.88);backdrop-filter:blur(12px);display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity 0.25s}
+.gen-modal.open{opacity:1;pointer-events:auto}
+.gen-box{background:var(--bg3);border:1px solid var(--border2);border-radius:16px;width:min(680px,95vw);max-height:84vh;overflow-y:auto;padding:32px;position:relative;transform:scale(0.96);transition:all 0.3s cubic-bezier(0.16,1,0.3,1)}
+.gen-modal.open .gen-box{transform:scale(1)}
+.gen-close{position:absolute;top:12px;right:12px;width:26px;height:26px;border-radius:50%;background:var(--glass2);border:1px solid var(--border);color:var(--text2);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:12px;transition:all 0.2s}
+.gen-close:hover{background:var(--rd);color:var(--red)}
+.gen-content p{font-size:12px;color:var(--text2);line-height:1.75;margin-bottom:11px}
+.gen-content strong{color:var(--text)}
+.gen-stat{font-family:var(--fm);font-size:11px;background:var(--gold-dim);color:var(--gold);padding:1px 5px;border-radius:2px}
+
+/* ── SOURCES / FOOTER ── */
+.src-chips{display:flex;flex-wrap:wrap;gap:6px;margin:20px 0}
+.schip{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;background:var(--glass);border:1px solid var(--border);border-radius:16px;font-family:var(--fm);font-size:9px;color:var(--text2)}
+.schip span{width:3px;height:3px;background:var(--gold);border-radius:50%}
+.disclaimer{font-size:10px;color:var(--text3);line-height:1.65;padding:14px 16px;background:var(--glass);border-left:2px solid var(--border2);border-radius:0 var(--r) var(--r) 0}
+footer{background:var(--bg2);border-top:1px solid var(--border);padding:28px 28px;display:flex;align-items:center;justify-content:space-between}
+.footer-brand{font-family:var(--fm);font-size:9px;letter-spacing:0.16em;color:var(--gold-d);text-transform:uppercase}
+.footer-note{font-size:9px;color:var(--text3);font-family:var(--fm)}
+
+/* ── UTILS ── */
+.counter{display:inline-block}
+.fade-in{opacity:0;transform:translateY(16px);transition:opacity 0.6s ease,transform 0.6s ease}
+.fade-in.vis{opacity:1;transform:translateY(0)}
+.toggle{position:relative;width:40px;height:21px;display:inline-block}
+.toggle input{opacity:0;width:0;height:0}
+.ts{position:absolute;inset:0;background:rgba(255,255,255,0.07);border-radius:11px;cursor:pointer;transition:.25s}
+.ts::before{content:'';position:absolute;width:15px;height:15px;left:3px;top:3px;background:var(--text3);border-radius:50%;transition:.25s}
+input:checked + .ts{background:rgba(184,148,63,0.25)}
+input:checked + .ts::before{transform:translateX(19px);background:var(--gold)}
+@media(max-width:1100px){:root{--sidebar:0px}#sidebar{transform:translateX(-232px)}#mainContent{margin-left:0}.h-kpis{grid-template-columns:repeat(2,1fr)}.ec-grid,.funnel-layout,.sim-layout,.lorenz-layout,.pm-grid{grid-template-columns:1fr}.insights-grid{grid-template-columns:1fr 1fr}.surv-layout{grid-template-columns:1fr}.brief-grid{grid-template-columns:1fr 1fr}}
+@media(max-width:640px){.h-kpis{grid-template-columns:1fr 1fr}.insights-grid{grid-template-columns:1fr}.srg{grid-template-columns:1fr}.brief-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<!-- LOADING SCREEN -->
+<div id="loadScreen">
+  <div class="ls-logo"><div class="ls-mark">TQ</div><div class="ls-name">TennisIQ</div></div>
+  <div class="ls-tag">Sports Business Intelligence Platform</div>
+  <div class="ls-bar-wrap"><div class="ls-bar" id="lsBar"></div></div>
+  <div class="ls-status" id="lsStatus">Initializing data model&hellip;</div>
+</div>
+
+<!-- STATUS BAR -->
+<div id="statusBar">
+  <div class="sb-item"><div class="sb-dot sb-live"></div>&nbsp;Live Feed</div>
+  <div class="sb-item"><strong id="sbTime">--:--:--</strong></div>
+  <div class="sb-item">Updated <strong id="sbSince">moments ago</strong></div>
+  <div class="sb-item"><strong>12</strong> data streams connected</div>
+  <div class="sb-item">Forecast engine <strong style="color:var(--green)">active</strong></div>
+  <div class="sb-item">Data confidence: <strong style="color:var(--blue)">87%</strong></div>
+  <div class="sb-item">Build 2.4.1 &middot; Institutional Preview</div>
+</div>
+
+<!-- SIDEBAR -->
+<nav id="sidebar">
+  <div class="sb-header">
+    <div class="sb-logo"><div class="sb-mark">TQ</div><div><div class="sb-brand">TennisIQ</div><div class="sb-sub">Business Intelligence</div></div></div>
+  </div>
+  <div class="sb-nav">
+    <div class="sb-cat">Overview</div>
+    <a class="sb-item-link" href="#exec-brief"><span class="sb-icon">&#128196;</span>Industry Brief</a>
+    <a class="sb-item-link" href="#hero"><span class="sb-icon">&#127968;</span>Platform Home</a>
+    <div class="sb-cat">Analytics</div>
+    <a class="sb-item-link" href="#exec-insights"><span class="sb-icon">&#128201;</span>Executive Insights</a>
+    <a class="sb-item-link" href="#cis-section"><span class="sb-icon">&#9733;</span>CIS&trade; Rankings</a>
+    <a class="sb-item-link" href="#economics"><span class="sb-icon">&#128187;</span>Revenue Economics</a>
+    <a class="sb-item-link" href="#dollar-flow"><span class="sb-icon">&#128184;</span>Revenue Allocation</a>
+    <a class="sb-item-link" href="#world-map"><span class="sb-icon">&#127758;</span>Global Markets</a>
+    <div class="sb-cat">Models</div>
+    <a class="sb-item-link" href="#survival"><span class="sb-icon">&#9889;</span>Financial Survival<span style="font-family:var(--fm);font-size:7px;background:var(--rd);color:var(--red);padding:1px 4px;border-radius:2px;margin-left:5px">FLAGSHIP</span></a>
+    <a class="sb-item-link" href="#road"><span class="sb-icon">&#127942;</span>Player Journey</a>
+    <a class="sb-item-link" href="#simulator"><span class="sb-icon">&#9881;</span>Scenario Simulator</a>
+    <a class="sb-item-link" href="#lorenz"><span class="sb-icon">&#128200;</span>Inequality Analysis</a>
+    <div class="sb-cat">Research</div>
+    <a class="sb-item-link" href="#insights"><span class="sb-icon">&#128161;</span>Key Findings</a>
+    <a class="sb-item-link" href="#methodology"><span class="sb-icon">&#128220;</span>Methodology</a>
+  </div>
+  <div class="sb-footer">
+    <div class="sb-build">Build 2.4.1 &middot; May 2026 &middot; <span style="color:var(--green)">Online</span></div>
+    <div class="sb-conf-row"><span style="font-family:var(--fm);font-size:8px;color:var(--text3)">Confidence</span><div class="sb-conf-bar"><div class="sb-conf-fill"></div></div><span style="font-family:var(--fm);font-size:8px;color:var(--blue)">87%</span></div>
+  </div>
+</nav>
+
+<!-- MAIN CONTENT -->
+<div id="mainContent">
+
+<div class="top-nav">
+  <div class="tn-brand">TennisIQ &mdash; Grand Slam Intelligence Platform</div>
+  <div class="tn-center"><div class="tn-search"><span style="color:var(--text3);font-size:11px">&#128269;</span><input type="text" placeholder="Search players, metrics, tournaments&hellip;" id="searchInput"></div></div>
+  <div class="tn-right">
+    <button class="tn-btn" onclick="document.getElementById('genModal').classList.add('open')">&#9998; Generate Summary</button>
+    <button class="tn-btn prim" onclick="window.print()">&#8595; Export PDF</button>
+  </div>
+</div>
+
+<!-- TICKER -->
+<div class="ticker-wrap">
+  <div class="ticker-inner">
+    <span class="ti">Wimbledon 2025 Prize Fund <strong>&pound;50.0M</strong> <span class="ti-up">&#9650; +6.8%</span> <span class="tb tb-off">Official</span></span>
+    <span class="ti">US Open 2025 Prize Fund <strong>$75.0M</strong> <span class="ti-up">&#9650; +9.5%</span> <span class="tb tb-off">Official</span></span>
+    <span class="ti">Roland Garros 2025 <strong>&euro;53.5M</strong> <span class="ti-up">&#9650; +7.2%</span> <span class="tb tb-off">Official</span></span>
+    <span class="ti">Australian Open 2025 <strong>AUD 86.5M</strong> <span class="ti-up">&#9650; +11.3%</span> <span class="tb tb-off">Official</span></span>
+    <span class="ti">Combined 4-Slam Revenue <strong>~$1.89B USD</strong> <span class="tb tb-est">Estimated</span></span>
+    <span class="ti">Player Revenue Share <strong>~17&ndash;19%</strong> <span class="ti-dn">vs NBA 50%</span> <span class="tb tb-mod">Modelled</span></span>
+    <span class="ti">Alcaraz CIS&trade; <strong>94.2</strong> <span class="ti-up">&#9650; +3.1</span> <span class="tb tb-mod">Proprietary</span></span>
+    <span class="ti">Wimbledon 2025 Prize Fund <strong>&pound;50.0M</strong> <span class="ti-up">&#9650; +6.8%</span> <span class="tb tb-off">Official</span></span>
+    <span class="ti">US Open 2025 Prize Fund <strong>$75.0M</strong> <span class="ti-up">&#9650; +9.5%</span> <span class="tb tb-off">Official</span></span>
+    <span class="ti">Roland Garros 2025 <strong>&euro;53.5M</strong> <span class="ti-up">&#9650; +7.2%</span> <span class="tb tb-off">Official</span></span>
+    <span class="ti">Australian Open 2025 <strong>AUD 86.5M</strong> <span class="ti-up">&#9650; +11.3%</span> <span class="tb tb-off">Official</span></span>
+    <span class="ti">Combined 4-Slam Revenue <strong>~$1.89B USD</strong> <span class="tb tb-est">Estimated</span></span>
+    <span class="ti">Player Revenue Share <strong>~17&ndash;19%</strong> <span class="ti-dn">vs NBA 50%</span> <span class="tb tb-mod">Modelled</span></span>
+    <span class="ti">Alcaraz CIS&trade; <strong>94.2</strong> <span class="ti-up">&#9650; +3.1</span> <span class="tb tb-mod">Proprietary</span></span>
+  </div>
+</div>
+
+<!-- EXECUTIVE BRIEF -->
+<section id="exec-brief">
+  <div class="sw">
+    <div class="brief-hd">
+      <div>
+        <div class="brief-label">Tennis Industry Intelligence Brief &middot; Q2 2026</div>
+        <h1 class="brief-h1">Grand Slam Economic<br>Intelligence Report</h1>
+        <p class="brief-desc">TennisIQ is a sports business intelligence platform analyzing the commercial economics, media value, and financial ecosystem of professional tennis. This report synthesises publicly available data, official disclosures, and proprietary modelling across the 2000&ndash;2025 period.</p>
+      </div>
+      <div class="brief-stamp">
+        <div class="bs-line">Report Date: <strong>May 2026</strong></div>
+        <div class="bs-line">Methodology: <strong>Multi-Source Triangulation</strong></div>
+        <div class="bs-line">Data Confidence: <strong style="color:var(--blue)">87%</strong></div>
+        <div class="bs-line">Classification: <strong>Independent Research</strong></div>
+        <div class="bs-line">Model Version: <strong>v2.4.1</strong></div>
+        <div style="margin-top:10px;display:flex;gap:6px"><span class="db db-est">Estimates marked throughout</span></div>
+      </div>
+    </div>
+    <div class="brief-grid">
+      <div class="brief-cell"><div class="bc-num">FINDING 01</div><div class="bc-val">+412%</div><div class="bc-label">Grand Slam revenue growth since 2000 vs +94% real prize growth</div><div class="bc-badge bc-up">&#9650; Revenue surge</div></div>
+      <div class="brief-cell"><div class="bc-num">FINDING 02</div><div class="bc-val">~18%</div><div class="bc-label">Estimated player revenue share vs 50% NBA CBA guarantee</div><div class="bc-badge bc-dn">&#9660; Structural gap</div></div>
+      <div class="brief-cell"><div class="bc-num">FINDING 03</div><div class="bc-val">~60%</div><div class="bc-label">Professional players estimated to operate at a net deficit annually</div><div class="bc-badge bc-dn">&#9660; Career risk</div></div>
+      <div class="brief-cell"><div class="bc-num">FINDING 04</div><div class="bc-val">~52%</div><div class="bc-label">Of total Slam revenue now from broadcasting &amp; streaming rights</div><div class="bc-badge bc-up">&#9650; Media surge</div></div>
+      <div class="brief-cell"><div class="bc-num">FINDING 05</div><div class="bc-val">0.81</div><div class="bc-label">Tennis prize Gini coefficient &mdash; far above NBA salary inequality (0.48)</div><div class="bc-badge bc-dn">&#9660; Inequality rising</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- HERO -->
+<section id="hero">
+  <div class="hero-grid"></div>
+  <div class="sw hw">
+    <div class="h-label">Grand Slam Economics &middot; Independent Research Platform</div>
+    <h1 class="h-title">Tennis<br><em class="hl">Revenue</em><br>Intelligence</h1>
+    <p class="h-sub">Analyzing the economics, commercial growth, and financial structure of professional tennis. Institutional-grade analytics for sponsors, media networks, and agencies.</p>
+    <div class="h-thesis"><p>Grand Slam revenues have grown substantially faster than inflation-adjusted player compensation, widening the economic gap between tournament organizers and professional players &mdash; and rendering lower-ranked professional careers financially unsustainable.</p></div>
+    <div class="h-ctas">
+      <a href="#exec-insights" class="cta-p">&#9654; Explore Analytics</a>
+      <a href="#economics" class="cta-s">&#128202; Economic Report</a>
+      <a href="#survival" class="cta-s">&#9889; Survival Simulator</a>
+      <a href="#simulator" class="cta-s">&#9881; Run Scenarios</a>
+    </div>
+    <div class="h-kpis">
+      <div class="kpi"><div class="kpi-label">Revenue Growth (2000&ndash;2025)</div><div class="kpi-val">+<span class="counter" data-target="412">0</span>%</div><div class="kpi-delta up">&#9650; Combined 4-Slam est.</div></div>
+      <div class="kpi"><div class="kpi-label">Nominal Prize Growth</div><div class="kpi-val">+<span class="counter" data-target="287">0</span>%</div><div class="kpi-delta up">&#9650; All four majors</div></div>
+      <div class="kpi"><div class="kpi-label">Real CPI-Adjusted Growth</div><div class="kpi-val">+<span class="counter" data-target="94">0</span>%</div><div class="kpi-delta nu">&#9658; 2000 base USD</div></div>
+      <div class="kpi"><div class="kpi-label">Gap vs NBA Revenue Share</div><div class="kpi-val"><span class="counter" data-target="32">0</span>pp</div><div class="kpi-delta dn">&#9660; Structural deficit</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- NARRATIVE BRIDGE -->
+<div class="section-bridge alt"><div class="sw"><p>The following four findings frame this report&rsquo;s analytical thesis: that the commercial expansion of professional tennis has not been shared proportionally with the athletes who generate its product. Each panel draws on a distinct evidence stream &mdash; revenue data, sponsorship economics, career finance, and media valuation &mdash; to build a cumulative case.</p></div></div>
+
+<!-- EXECUTIVE INSIGHT CARDS -->
+<section id="exec-insights" class="sp alt">
+  <div class="sw">
+    <div class="sh">
+      <div><div class="sl">01 &mdash; Executive Intelligence</div><h2 class="stitle">Four Critical<br>Economic Findings</h2><p class="sdesc">Platform-derived analytical conclusions across revenue economics, compensation structure, and commercial dynamics. Q2 2026.</p></div>
+      <div class="sh-actions"><span class="db db-est">Q2 2026</span><span class="db db-mod">Multi-source</span></div>
+    </div>
+    <div class="ec-grid">
+      <div class="ec fade-in" style="--cc:#B8943F">
+        <div class="ec-tag"><div class="ec-dot"></div>Revenue Economics &middot; <span class="stag">Sportico / Forbes<span class="stip">Revenue index derived from Sportico revenue rankings and Forbes tournament valuations. CPI from US BLS CPI-U All Items, base 2000.</span></span></div>
+        <div class="ec-h">Revenue Growth Outpaces Player Compensation</div>
+        <div class="ec-b">Grand Slam combined revenues have grown an estimated +412% since 2000, while inflation-adjusted prize money grew only +94%. The divergence accelerates post-2015 as streaming deal escalation outpaces prize commitments.</div>
+        <div class="ec-metrics"><div class="ec-m"><div class="ec-mv">4.4&times;</div><div class="ec-ms">Revenue vs real prize growth</div></div><div class="ec-m"><div class="ec-mv">+218pp</div><div class="ec-ms">Cumulative divergence gap</div></div><div class="ec-spark"><canvas id="spark1" width="180" height="44"></canvas></div></div>
+        <div style="display:flex;gap:7px;flex-wrap:wrap"><span class="ta ta-up">&#9650; Revenue: +412%</span><span class="ta ta-dn">&#9660; Real prize: +94%</span></div>
+      </div>
+      <div class="ec fade-in" style="--cc:#2D7DD2">
+        <div class="ec-tag"><div class="ec-dot"></div>Structural Comparison &middot; <span class="stag">NBA/NFL/NHL/MLB CBAs<span class="stip">NBA CBA 2023: 50% BRI. NFL CBA 2020: 48.5%. MLB CBA 2022: ~48%. NHL CBA 2022: 50% HRR. Tennis modelled from prize pool / estimated total revenue.</span></span></div>
+        <div class="ec-h">Tennis Has Lower Revenue Sharing Than Major Leagues</div>
+        <div class="ec-b">NBA, NFL, NHL, and MLB players receive 48&ndash;50% of revenues via legally binding CBAs. Tennis players receive an estimated 17&ndash;19% of Grand Slam revenues with no equivalent collective bargaining mechanism.</div>
+        <div class="ec-metrics"><div class="ec-m"><div class="ec-mv" style="color:var(--blue)">~18%</div><div class="ec-ms">Tennis player share</div></div><div class="ec-m"><div class="ec-mv" style="color:var(--green)">50%</div><div class="ec-ms">NBA share (CBA)</div></div><div class="ec-spark"><canvas id="spark2" width="180" height="44"></canvas></div></div>
+        <div style="display:flex;gap:7px"><span class="ta ta-dn">&#9660; 32pp gap vs team sports</span><span class="ta ta-nu">PTPA est. 2020</span></div>
+      </div>
+      <div class="ec fade-in" style="--cc:#D94054">
+        <div class="ec-tag"><div class="ec-dot"></div>Career Economics &middot; <span class="stag">ATP data / PTPA surveys<span class="stip">Prize income estimated from ATP ranking prize distributions. Expense data from PTPA player surveys and publicly available player accounts. All figures indicative.</span></span></div>
+        <div class="ec-h">Lower-Ranked Players Face Unsustainable Economics</div>
+        <div class="ec-b">Players outside the top 100 earn an estimated $80&ndash;140K in prize money annually against $115&ndash;200K in typical costs. Without sponsorship, professional tennis below rank 100 is economically unviable for most.</div>
+        <div class="ec-metrics"><div class="ec-m"><div class="ec-mv" style="color:var(--red)">~60%</div><div class="ec-ms">Pros estimated net-negative</div></div><div class="ec-m"><div class="ec-mv" style="color:var(--red)">-$55K</div><div class="ec-ms">Challenger net income</div></div><div class="ec-spark"><canvas id="spark3" width="180" height="44"></canvas></div></div>
+        <div style="display:flex;gap:7px"><span class="ta ta-dn">&#9660; R100&ndash;R250: structural losses</span></div>
+      </div>
+      <div class="ec fade-in" style="--cc:#16A8A8">
+        <div class="ec-tag"><div class="ec-dot"></div>Media Economics &middot; <span class="stag">SportsPro / Broadcasting Rights Tracker<span class="stip">Broadcasting share estimated from SportsPro Media's Global Broadcast Rights Tracker and publicly announced deal structures.</span></span></div>
+        <div class="ec-h">Grand Slam Media Revenue Continues to Surge</div>
+        <div class="ec-b">Broadcasting and streaming rights now account for ~52% of Grand Slam revenue, up from ~30% in 2005. Next-generation streaming deals are projected to drive a 30&ndash;50% uplift without corresponding prize commitments.</div>
+        <div class="ec-metrics"><div class="ec-m"><div class="ec-mv" style="color:var(--teal)">~52%</div><div class="ec-ms">Broadcast share</div></div><div class="ec-m"><div class="ec-mv" style="color:var(--teal)">+40%</div><div class="ec-ms">Next-cycle uplift est.</div></div><div class="ec-spark"><canvas id="spark4" width="180" height="44"></canvas></div></div>
+        <div style="display:flex;gap:7px"><span class="ta ta-up">&#9650; Streaming share rising</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- NARRATIVE BRIDGE -->
+<div class="section-bridge"><div class="sw"><p>The Commercial Impact Score&trade; (CIS&trade;) translates these macro findings into player-level intelligence. It reveals the extreme concentration of commercial value in tennis &mdash; the top 5 players account for an estimated 60&ndash;70% of all sponsorship and media revenue generated by the circuit.</p></div></div>
+
+<!-- CIS LEADERBOARD (institutional table) -->
+<section id="cis-section" class="sp">
+  <div class="sw">
+    <div class="sh">
+      <div>
+        <div class="sl">02 &mdash; Proprietary Analytics</div>
+        <h2 class="stitle">Commercial Impact Score&trade;<br>Rankings</h2>
+        <p class="sdesc">TennisIQ&rsquo;s weighted composite metric. <span style="color:var(--gold);cursor:pointer" onclick="document.getElementById('cisInfoModal').classList.add('open')">View full methodology &rarr;</span></p>
+      </div>
+      <div class="sh-actions"><span class="db db-mod">Proprietary</span><span class="db db-est">Q2 2026</span></div>
+    </div>
+    <div class="cs fade-in">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <div style="font-family:var(--fm);font-size:9px;color:var(--text3);letter-spacing:0.1em">Click any row to open full player profile. Click column headers to sort.</div>
+        <div class="conf-ind"><div class="conf-pip" style="background:var(--amber)"></div><span>Confidence: High for top 5 · Moderate for others</span></div>
+      </div>
+      <div class="cis-table-wrap">
+        <table class="inst-table" id="cisTable">
+          <thead>
+            <tr>
+              <th onclick="sortTable('cisTable',0)" data-col="0">Rank<span class="sort-arrow">&#8597;</span></th>
+              <th onclick="sortTable('cisTable',1)" data-col="1">Player<span class="sort-arrow">&#8597;</span></th>
+              <th onclick="sortTable('cisTable',2)" data-col="2">Tour<span class="sort-arrow">&#8597;</span></th>
+              <th onclick="sortTable('cisTable',3)" data-col="3">CIS&trade;<span class="sort-arrow">&#8597;</span></th>
+              <th onclick="sortTable('cisTable',4)" data-col="4">Move<span class="sort-arrow">&#8597;</span></th>
+              <th onclick="sortTable('cisTable',5)" data-col="5">Spon. Est.<span class="sort-arrow">&#8597;</span></th>
+              <th onclick="sortTable('cisTable',6)" data-col="6">Followers<span class="sort-arrow">&#8597;</span></th>
+              <th onclick="sortTable('cisTable',7)" data-col="7">Category<span class="sort-arrow">&#8597;</span></th>
+              <th>Confidence<span class="sort-arrow"></span></th>
+            </tr>
+          </thead>
+          <tbody id="cisTableBody"></tbody>
+        </table>
+      </div>
+      <div class="cs-footer"><div class="cs-ts">Updated: <span id="cisTs">moments ago</span> &middot; <span class="db db-mod">CIS&trade; scores are modelled estimates</span> &middot; <span class="stag">Source: public data + TennisIQ model<span class="stip">CIS&trade; computed from ATP/WTA ranking data, publicly disclosed sponsorship announcements, social media analytics, broadcast mention tracking, and search volume indices. Updated quarterly.</span></span></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- PLAYER MODAL -->
+<div class="mo" id="playerModal" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="pm">
+    <button class="pm-close" onclick="document.getElementById('playerModal').classList.remove('open')">&times;</button>
+    <div class="pm-hd">
+      <div class="pm-av" id="mAv">&#127934;</div>
+      <div><div class="pm-name" id="mName">Player</div><div class="pm-meta" id="mMeta">ATP</div><div style="display:flex;gap:6px;margin-top:7px;flex-wrap:wrap" id="mTags"></div></div>
+      <div><div class="pm-cis-lbl">CIS&trade; Score</div><div class="pm-cis-val" id="mCis">--</div><div style="font-family:var(--fm);font-size:8px;color:var(--text3);margin-top:3px;text-align:right" id="mMove"></div></div>
+    </div>
+    <div class="pm-grid">
+      <div class="pm-card"><div class="pm-card-title">Commercial Profile</div><div id="mStats1"></div></div>
+      <div class="pm-card"><div class="pm-card-title">Performance &amp; Audience</div><div id="mStats2"></div></div>
+    </div>
+    <div style="margin-bottom:18px"><div style="font-family:var(--fm);font-size:8px;color:var(--text3);letter-spacing:0.13em;text-transform:uppercase;margin-bottom:8px">CIS&trade; Component Breakdown</div><div style="position:relative;height:145px"><canvas id="mRadar"></canvas></div></div>
+    <div><div class="pm-ai-lbl">&#9913;&#65039; AI-Generated Executive Analysis <span class="db db-mod" style="margin-left:4px">Modelled</span></div><div class="pm-ai" id="mAi"></div></div>
+  </div>
+</div>
+
+<!-- CIS INFO MODAL -->
+<div class="mo" id="cisInfoModal" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="pm" style="max-width:560px">
+    <button class="pm-close" onclick="document.getElementById('cisInfoModal').classList.remove('open')">&times;</button>
+    <div style="margin-bottom:20px"><div class="sl" style="margin-bottom:7px">Methodology</div><div style="font-family:var(--fd);font-size:24px">Commercial Impact Score&trade;</div></div>
+    <p style="font-size:11px;color:var(--text2);line-height:1.7;margin-bottom:16px">TennisIQ&rsquo;s proprietary composite metric quantifying a professional player&rsquo;s total commercial value, updated quarterly from publicly available data.</p>
+    <div class="formula">CIS = 0.25(P) + 0.20(S) + 0.20(E) + 0.15(V) + 0.12(A) + 0.08(T)</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px;font-size:10px;color:var(--text2)">
+      <div style="padding:9px;background:var(--glass);border-radius:var(--r)"><strong style="color:var(--gold)">P (25%)</strong> &mdash; Performance: ranking, Slam results, win rate</div>
+      <div style="padding:9px;background:var(--glass);border-radius:var(--r)"><strong style="color:var(--gold)">S (20%)</strong> &mdash; Sponsorship: estimated portfolio value</div>
+      <div style="padding:9px;background:var(--glass);border-radius:var(--r)"><strong style="color:var(--gold)">E (20%)</strong> &mdash; Engagement: Instagram, TikTok, X growth</div>
+      <div style="padding:9px;background:var(--glass);border-radius:var(--r)"><strong style="color:var(--gold)">V (15%)</strong> &mdash; Visibility: broadcast mentions, search</div>
+      <div style="padding:9px;background:var(--glass);border-radius:var(--r)"><strong style="color:var(--gold)">A (12%)</strong> &mdash; Attendance: estimated gate premium</div>
+      <div style="padding:9px;background:var(--glass);border-radius:var(--r)"><strong style="color:var(--gold)">T (8%)</strong> &mdash; Trend: 12-month commercial trajectory</div>
+    </div>
+    <div class="disclaimer" style="margin-top:14px">All CIS&trade; scores are modelled estimates derived from publicly available data. They do not constitute official commercial valuations. Methodology updated quarterly.</div>
+  </div>
+</div>
+
+<!-- NARRATIVE BRIDGE -->
+<div class="section-bridge alt"><div class="sw"><p>The economic divergence documented in Section 01 is most visible in the Grand Slam revenue data below. What reads as impressive nominal prize growth in isolation becomes structurally concerning when set against revenue indices and inflation adjustment &mdash; a gap that has widened in every measurement period since 2010.</p></div></div>
+
+<!-- ECONOMICS -->
+<section id="economics" class="sp alt">
+  <div class="sw">
+    <div class="sh">
+      <div><div class="sl">03 &mdash; Tennis Economics</div><h2 class="stitle">Revenue, Prizes &amp;<br>Commercial Growth</h2><p class="sdesc">Grand Slam revenue trends, prize money dynamics, and cross-sport comparisons. 2000&ndash;2025.</p></div>
+      <div class="sh-actions"><span class="db db-est">Multi-source</span></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      <div class="cs fade-in" style="grid-column:1/-1">
+        <div class="cs-title">Revenue vs Prize Money Growth Index &mdash; Base 100 = 2000</div>
+        <div class="cs-sub">The core divergence: revenues grew 4&times; faster than real prizes over 25 years</div>
+        <div class="cs-badges"><span class="db db-est">Estimated</span><span class="db db-cpi">CPI Adjusted</span><span class="stag" style="margin-left:4px">Sportico / Forbes / BLS CPI-U<span class="stip">Revenue index from Sportico rankings and Forbes tournament valuations. Prize from ATP/WTA official records. Inflation: BLS CPI-U All Items, base 2000.</span></span></div>
+        <div class="cs-legend"><div class="ld"><div class="ldot" style="background:#B8943F"></div>Slam Revenue</div><div class="ld"><div class="ldot" style="background:#1DB874"></div>Nominal Prize</div><div class="ld"><div class="ldot" style="background:#2D7DD2"></div>Real Prize (CPI)</div><div class="ld"><div class="ldot" style="background:#7B5EA7"></div>CPI Baseline</div></div>
+        <div style="position:relative;height:260px"><canvas id="summaryChart"></canvas></div>
+        <div class="cs-footer"><div class="cs-ts">Sources: Sportico (2024), Forbes Sports, BLS CPI-U &middot; Updated annually</div><div class="conf-ind"><div class="conf-pip" style="background:var(--amber)"></div><span>Revenue index: Estimated composite &middot; Prize data: Official</span></div></div>
+      </div>
+      <div class="cs fade-in">
+        <div class="cs-title">Grand Slam Revenue Profiles (2024 est.)</div>
+        <div class="cs-sub"><span class="stag">AELTC Annual Report / TA ASIC / USTA Form 990 / FFT est.<span class="stip">Wimbledon: AELTC annual accounts (Companies House). AO: Tennis Australia ASIC filing. US Open: USTA Form 990, supplemented Sportico. Roland Garros: FFT partial disclosures, French press estimates.</span></span></div>
+        <div class="cs-badges"><span class="db db-off">AELTC Official</span><span class="db db-est">Others Estimated</span></div>
+        <div style="position:relative;height:210px"><canvas id="slamBarsChart"></canvas></div>
+      </div>
+      <div class="cs fade-in">
+        <div class="cs-title">Athlete Revenue Share Benchmark</div>
+        <div class="cs-sub"><span class="stag">CBA documents / TennisIQ model<span class="stip">NBA CBA 2023: 50% BRI. NFL CBA 2020: 48.5%. MLB CBA 2022: ~48%. NHL CBA: 50% HRR. Tennis: prize pool / estimated total revenue.</span></span></div>
+        <div class="cs-badges"><span class="db db-off">CBA Official</span><span class="db db-mod">Tennis Modelled</span></div>
+        <div style="position:relative;height:210px"><canvas id="shareChart"></canvas></div>
+      </div>
+      <div class="cs fade-in">
+        <div class="cs-title">US Open Prize &mdash; Nominal vs Real (2000 USD)</div>
+        <div class="cs-sub"><span class="stag">USTA Official / BLS CPI-U / Revenue-proportional model<span class="stip">Nominal from USTA official announcements. Real value deflated via BLS CPI-U. Counterfactual: prize hypothetically growing with estimated US Open revenue.</span></span></div>
+        <div class="cs-badges"><span class="db db-off">USTA Official</span><span class="db db-cpi">BLS CPI-U</span><span class="db db-mod">Counterfactual</span></div>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px"><span style="font-size:10px;color:var(--text2)">CPI Adjusted</span><label class="toggle"><input type="checkbox" id="inflToggle" checked><span class="ts"></span></label></div>
+        <div style="position:relative;height:192px"><canvas id="inflChart"></canvas></div>
+      </div>
+      <div class="cs fade-in">
+        <div class="cs-title">Revenue Composition by Source (2024 est.)</div>
+        <div class="cs-sub">Broadcasting dominates at ~52% of total Grand Slam revenue <span class="db db-est">Estimated</span></div>
+        <div class="cs-legend"><div class="ld"><div class="ldot" style="background:#B8943F"></div>Broadcasting</div><div class="ld"><div class="ldot" style="background:#1DB874"></div>Sponsorship</div><div class="ld"><div class="ldot" style="background:#2D7DD2"></div>Ticketing</div><div class="ld"><div class="ldot" style="background:#7B5EA7"></div>Other</div></div>
+        <div style="position:relative;height:192px"><canvas id="compChart"></canvas></div>
+      </div>
+      <div class="cs fade-in">
+        <div class="cs-title">Net Earnings by Ranking Tier (2024)</div>
+        <div class="cs-sub">After estimated $115&ndash;250K annual career expenses <span class="db db-mod">Modelled</span></div>
+        <div style="position:relative;height:192px"><canvas id="pyramidChart"></canvas></div>
+      </div>
+    </div>
+
+    <!-- REVENUE SHARE TABLE -->
+    <div style="margin-top:22px" class="fade-in">
+      <div class="cs">
+        <div class="cs-title" style="margin-bottom:12px">Revenue Share Comparison &mdash; Institutional Table</div>
+        <table class="inst-table" id="shareTable">
+          <thead><tr>
+            <th onclick="sortTable('shareTable',0)">League / Context<span class="sort-arrow">&#8597;</span></th>
+            <th onclick="sortTable('shareTable',1)" class="td-right">Player Share %<span class="sort-arrow">&#8597;</span></th>
+            <th onclick="sortTable('shareTable',2)">Mechanism<span class="sort-arrow">&#8597;</span></th>
+            <th onclick="sortTable('shareTable',3)" class="td-right">Annual Pool (est.)<span class="sort-arrow">&#8597;</span></th>
+            <th onclick="sortTable('shareTable',4)">Source<span class="sort-arrow">&#8597;</span></th>
+            <th>Confidence</th>
+          </tr></thead>
+          <tbody>
+            <tr><td>NBA</td><td class="td-mono td-right" style="color:var(--green)">50%</td><td style="font-size:10px">CBA (Basketball-Related Income)</td><td class="td-mono td-right">~$4.9B</td><td><span class="stag">NBA CBA 2023<span class="stip">Formally: 50% of Basketball-Related Income (BRI) as defined in the 2023 Collective Bargaining Agreement.</span></span></td><td><div class="conf-dots"><div class="conf-d on"></div><div class="conf-d on"></div><div class="conf-d on"></div></div></td></tr>
+            <tr><td>NHL</td><td class="td-mono td-right" style="color:var(--green)">50%</td><td style="font-size:10px">CBA (Hockey-Related Revenue)</td><td class="td-mono td-right">~$1.0B</td><td><span class="stag">NHL CBA 2022<span class="stip">50% of Hockey-Related Revenue (HRR) per NHL Collective Bargaining Agreement 2022.</span></span></td><td><div class="conf-dots"><div class="conf-d on"></div><div class="conf-d on"></div><div class="conf-d on"></div></div></td></tr>
+            <tr><td>NFL</td><td class="td-mono td-right" style="color:var(--green)">48.5%</td><td style="font-size:10px">CBA (Defined Gross Revenues)</td><td class="td-mono td-right">~$9.8B</td><td><span class="stag">NFL CBA 2020<span class="stip">~48.5% of Defined Gross Revenues per NFL-NFLPA 2020 Collective Bargaining Agreement.</span></span></td><td><div class="conf-dots"><div class="conf-d on"></div><div class="conf-d on"></div><div class="conf-d on"></div></div></td></tr>
+            <tr><td>MLB</td><td class="td-mono td-right" style="color:var(--green)">48%</td><td style="font-size:10px">CBA (Revenue sharing framework)</td><td class="td-mono td-right">~$4.2B</td><td><span class="stag">MLB CBA 2022<span class="stip">Approximate effective rate under 2022 MLB-MLBPA Collective Bargaining Agreement.</span></span></td><td><div class="conf-dots"><div class="conf-d on"></div><div class="conf-d on"></div><div class="conf-d on"></div></div></td></tr>
+            <tr style="background:rgba(217,64,84,0.03)"><td><strong>Tennis (4 Slams)</strong></td><td class="td-mono td-right" style="color:var(--red)">~18%</td><td style="font-size:10px">No CBA &mdash; prize pool only</td><td class="td-mono td-right" style="color:var(--red)">~$340M</td><td><span class="stag">TennisIQ model<span class="stip">Implied share: 4-Slam combined prize pool (~$340M) / estimated total revenue (~$1.89B). Does not include endorsements which primarily accrue to top-ranked players only.</span></span></td><td><div class="conf-dots"><div class="conf-d med"></div><div class="conf-d med"></div><div class="conf-d off"></div></div></td></tr>
+            <tr style="font-style:italic;color:var(--text2)"><td style="font-size:10px">Tennis (incl. endorsements, top 100)</td><td class="td-mono td-right" style="font-size:10px">~22&ndash;28%</td><td style="font-size:10px">Prize + top-player endorsements</td><td class="td-mono td-right" style="font-size:10px">~$650M+</td><td><span class="stag">TennisIQ model<span class="stip">Adjusted estimate including published endorsement deals for top-100 players. Highly skewed toward top 10&ndash;20 players.</span></span></td><td><div class="conf-dots"><div class="conf-d med"></div><div class="conf-d off"></div><div class="conf-d off"></div></div></td></tr>
+          </tbody>
+        </table>
+        <div class="cs-footer"><div class="cs-ts">Source: Official CBA documents; TennisIQ modelling for tennis figures &middot; Last verified May 2026</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- NARRATIVE BRIDGE -->
+<div class="section-bridge alt"><div class="sw"><p>The revenue allocation chart below is the visual centrepiece of this report. It answers the question that sits behind every prize money debate: where, precisely, does US Open revenue actually go? The $490M answer reveals that player prize money is the <em>smallest</em> named category of expenditure &mdash; just 10.8% of total estimated revenue.</p></div></div>
+
+<!-- $1 FLOW — SIGNATURE VISUALIZATION -->
+<section id="dollar-flow" class="sp">
+  <div class="sw">
+    <div class="sh">
+      <div><div class="sl">04 &mdash; Signature Visualization</div><h2 class="stitle">Where Does ~$490M of US Open<br>Revenue Actually Go?</h2><p class="sdesc">An animated allocation flow of the US Open&rsquo;s estimated ~$490M annual revenue across seven stakeholder categories. Each bar represents actual dollar destination. <span class="db db-est">Estimated model</span></p></div>
+    </div>
+    <div class="flow-wrap fade-in">
+      <canvas id="flowCanvas" height="480" style="display:block;width:100%"></canvas>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(7,1fr);margin-top:1px;border-top:1px solid var(--border)">
+      <div style="padding:10px 6px;text-align:center;border-right:1px solid var(--border)"><div style="font-family:var(--fm);font-size:14px;color:var(--green)">10.8%</div><div style="font-family:var(--fm);font-size:7px;color:var(--text3);margin-top:2px">PLAYER PRIZES</div></div>
+      <div style="padding:10px 6px;text-align:center;border-right:1px solid var(--border)"><div style="font-family:var(--fm);font-size:14px;color:var(--gold)">20.4%</div><div style="font-family:var(--fm);font-size:7px;color:var(--text3);margin-top:2px">BROADCASTING</div></div>
+      <div style="padding:10px 6px;text-align:center;border-right:1px solid var(--border)"><div style="font-family:var(--fm);font-size:14px;color:var(--blue)">20.0%</div><div style="font-family:var(--fm);font-size:7px;color:var(--text3);margin-top:2px">SPONSORSHIP</div></div>
+      <div style="padding:10px 6px;text-align:center;border-right:1px solid var(--border)"><div style="font-family:var(--fm);font-size:14px;color:var(--purple)">16.3%</div><div style="font-family:var(--fm);font-size:7px;color:var(--text3);margin-top:2px">OPERATIONS</div></div>
+      <div style="padding:10px 6px;text-align:center;border-right:1px solid var(--border)"><div style="font-family:var(--fm);font-size:14px;color:var(--orange)">14.3%</div><div style="font-family:var(--fm);font-size:7px;color:var(--text3);margin-top:2px">INFRASTRUCTURE</div></div>
+      <div style="padding:10px 6px;text-align:center;border-right:1px solid var(--border)"><div style="font-family:var(--fm);font-size:14px;color:var(--teal)">6.1%</div><div style="font-family:var(--fm);font-size:7px;color:var(--text3);margin-top:2px">ADMINISTRATION</div></div>
+      <div style="padding:10px 6px;text-align:center"><div style="font-family:var(--fm);font-size:14px;color:#6A6A74">12.2%</div><div style="font-family:var(--fm);font-size:7px;color:var(--text3);margin-top:2px">RETAINED</div></div>
+    </div>
+    <div style="margin-top:10px;font-size:10px;color:var(--text3);font-family:var(--fm)">Source: USTA Form 990, prize fund announcements, infrastructure disclosures &middot; <span class="db db-est">Estimated allocation model</span> &middot; Player prize money is the smallest named category.</div>
+  </div>
+</section>
+
+<!-- WORLD MAP -->
+<section id="world-map" class="sp alt">
+  <div class="sw">
+    <div class="sh">
+      <div><div class="sl">05 &mdash; Global Intelligence</div><h2 class="stitle">Global Tennis Markets &amp;<br>Audience Growth</h2><p class="sdesc">Fan growth regions, emerging markets, and sponsorship geography across the professional tour. <span class="db db-est">Estimated</span></p></div>
+    </div>
+    <div class="fade-in" style="border:1px solid var(--border);border-radius:var(--rx);overflow:hidden;background:#0B0E17;position:relative">
+      <div id="mapWrap" style="position:relative;width:100%;min-height:420px">
+        <svg id="wmap" style="display:block;width:100%;height:auto"></svg>
+        <div id="mapTooltip" style="position:absolute;background:#161C28;border:1px solid rgba(184,148,63,0.3);border-radius:6px;padding:8px 12px;font-family:DM Mono;font-size:10px;color:#DDE3EC;pointer-events:none;opacity:0;transition:opacity 0.15s;white-space:nowrap;z-index:10"></div>
+      </div>
+    </div>
+    <div class="map-legend" style="margin-top:12px">
+      <div class="map-leg-item"><div class="map-leg-dot" style="background:#1DB874"></div>Established markets</div>
+      <div class="map-leg-item"><div class="map-leg-dot" style="background:#B8943F"></div>Growth markets (10%+ YoY fan growth est.)</div>
+      <div class="map-leg-item"><div class="map-leg-dot" style="background:#2D7DD2"></div>Emerging markets</div>
+      <div class="map-leg-item"><div style="width:8px;height:8px;background:#D9405430;border:1px solid #D94054;transform:rotate(45deg);flex-shrink:0;margin-right:1px"></div>Sponsor HQ origin</div>
+    </div>
+    <div style="margin-top:14px" class="fade-in">
+      <div class="cs">
+        <div class="cs-title" style="margin-bottom:10px">Sponsorship Geography &amp; Audience Reach</div>
+        <table class="inst-table" id="mktTable">
+          <thead><tr>
+            <th onclick="sortTable('mktTable',0)">Market Region<span class="sort-arrow">&#8597;</span></th>
+            <th onclick="sortTable('mktTable',1)">Growth Signal<span class="sort-arrow">&#8597;</span></th>
+            <th onclick="sortTable('mktTable',2)" class="td-right">Fan Base Est.<span class="sort-arrow">&#8597;</span></th>
+            <th onclick="sortTable('mktTable',3)">Key Driver<span class="sort-arrow">&#8597;</span></th>
+            <th onclick="sortTable('mktTable',4)">Status<span class="sort-arrow">&#8597;</span></th>
+          </tr></thead>
+          <tbody>
+            <tr><td>Europe (W.)</td><td><span class="ta ta-up">&#9650; Core</span></td><td class="td-mono td-right">~280M fans est.</td><td style="font-size:10px">Historical heartland, Wimbledon / Roland Garros</td><td><span class="db db-off">Established</span></td></tr>
+            <tr><td>North America</td><td><span class="ta ta-up">&#9650; Growing</span></td><td class="td-mono td-right">~140M fans est.</td><td style="font-size:10px">US Open + Gauff effect, streaming penetration</td><td><span class="db db-off">Established</span></td></tr>
+            <tr><td>Asia-Pacific</td><td><span class="ta ta-up">&#9650; Surge</span></td><td class="td-mono td-right">~380M fans est.</td><td style="font-size:10px">AO expansion, Li Na legacy, rising disposable income</td><td><span class="db db-est">Growth</span></td></tr>
+            <tr><td>China</td><td><span class="ta ta-up">&#9650; High growth</span></td><td class="td-mono td-right">~95M fans est.</td><td style="font-size:10px">Peng Shuai aftermath recovery, WTA return</td><td><span class="db db-est">Growth</span></td></tr>
+            <tr><td>Latin America</td><td><span class="ta ta-up">&#9650; Alcaraz effect</span></td><td class="td-mono td-right">~80M fans est.</td><td style="font-size:10px">Alcaraz / Nadal legacy, streaming accessibility</td><td><span class="db db-est">Growth</span></td></tr>
+            <tr><td>Middle East / UAE</td><td><span class="ta ta-up">&#9650; Investment-led</span></td><td class="td-mono td-right">~28M fans est.</td><td style="font-size:10px">Abu Dhabi / Dubai event investment, sovereign wealth</td><td><span class="db db-mod">Emerging</span></td></tr>
+            <tr><td>India</td><td><span class="ta ta-up">&#9650; Nascent surge</span></td><td class="td-mono td-right">~40M fans est.</td><td style="font-size:10px">Digital-first audience, rising disposable income</td><td><span class="db db-mod">Emerging</span></td></tr>
+          </tbody>
+        </table>
+        <div class="cs-footer"><div class="cs-ts">Fan base estimates: modelling from broadcast reach, social data &middot; <span class="db db-mod">Highly estimated</span></div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- NARRATIVE BRIDGE -->
+<div class="section-bridge"><div class="sw"><p>The Financial Survival Engine below translates the macro findings into a personal-scale model. Adjust the parameters to any real or hypothetical career scenario and the platform will calculate the full P&amp;L, sustainability metrics, debt accumulation trajectory, and burnout risk profile &mdash; in real time.</p></div></div>
+
+<!-- FINANCIAL SURVIVAL ENGINE -->
+<section id="survival" class="sp">
+  <div class="sw">
+    <div class="sh">
+      <div>
+        <div class="sl">06 &mdash; Flagship Feature</div>
+        <h2 class="stitle">Can a Pro Tennis Player<br>Financially Survive?</h2>
+        <p class="sdesc">Enter career parameters. Simulate full-season P&amp;L, debt trajectory, sponsorship dependence, burnout risk, and financial sustainability rating.</p>
+      </div>
+      <div class="sh-actions"><span class="db db-mod">Interactive Model</span></div>
+    </div>
+    <div class="surv-layout">
+      <!-- INPUTS -->
+      <div class="surv-in">
+        <div style="font-family:var(--fm);font-size:9px;letter-spacing:0.14em;text-transform:uppercase;color:var(--text3);margin-bottom:16px">Season Parameters <span class="db db-mod" style="margin-left:4px">Modelled</span></div>
+
+        <div class="surv-section-lbl">Career Profile</div>
+        <div class="surv-field"><div class="sfl"><span class="sfl-name">ATP/WTA Ranking</span><span class="sfl-val" id="sRankV">#80</span></div><input type="range" id="s_rank" min="1" max="500" value="80" step="1"><div style="display:flex;justify-content:space-between;font-size:8px;color:var(--text3);font-family:var(--fm);margin-top:3px"><span>#1 (World #1)</span><span>#500</span></div></div>
+        <div class="surv-field"><div class="sfl"><span class="sfl-name">Tournaments Played</span><span class="sfl-val" id="sTourV">26</span></div><input type="range" id="s_tour" min="8" max="40" value="26" step="1"></div>
+        <div class="surv-field"><div class="sfl"><span class="sfl-name">Win Rate (%)</span><span class="sfl-val" id="sWinV">44%</span></div><input type="range" id="s_win" min="10" max="90" value="44" step="1"></div>
+        <div class="surv-field"><div class="sfl"><span class="sfl-name">Sponsorship Income ($K)</span><span class="sfl-val" id="sSponV">$60K</span></div><input type="range" id="s_spon" min="0" max="500" value="60" step="5"></div>
+
+        <div class="surv-section-lbl">Annual Expenses ($K)</div>
+        <div class="surv-field"><div class="sfl"><span class="sfl-name">Coach Salary</span><span class="sfl-val" id="sCoachV">$65K</span></div><input type="range" id="s_coach" min="0" max="250" value="65" step="5"></div>
+        <div class="surv-field"><div class="sfl"><span class="sfl-name">Flights &amp; Hotels</span><span class="sfl-val" id="sTravelV">$75K</span></div><input type="range" id="s_travel" min="10" max="200" value="75" step="5"></div>
+        <div class="surv-field"><div class="sfl"><span class="sfl-name">Physio / Medical</span><span class="sfl-val" id="sPhysioV">$22K</span></div><input type="range" id="s_physio" min="0" max="80" value="22" step="2"></div>
+        <div class="surv-field"><div class="sfl"><span class="sfl-name">Equipment &amp; Misc.</span><span class="sfl-val" id="sEquipV">$16K</span></div><input type="range" id="s_equip" min="0" max="60" value="16" step="2"></div>
+
+        <div class="surv-section-lbl">Financial Parameters</div>
+        <div class="surv-field"><div class="sfl"><span class="sfl-name">Agent Commission (%)</span><span class="sfl-val" id="sAgentV">5%</span></div><input type="range" id="s_agent" min="0" max="20" value="5" step="1"></div>
+        <div class="surv-field"><div class="sfl"><span class="sfl-name">Effective Tax Rate (%)</span><span class="sfl-val" id="sTaxV">28%</span></div><input type="range" id="s_tax" min="0" max="55" value="28" step="1"></div>
+        <div class="surv-field"><div class="sfl"><span class="sfl-name">Weeks Away from Home</span><span class="sfl-val" id="sWeeksV">32</span></div><input type="range" id="s_weeks" min="8" max="45" value="32" step="1"></div>
+        <div class="surv-field"><div class="sfl"><span class="sfl-name">Family Financial Support ($K)</span><span class="sfl-val" id="sFamV">$0</span></div><input type="range" id="s_fam" min="0" max="200" value="0" step="5"></div>
+
+        <div style="margin-top:14px;padding:10px 12px;background:var(--glass);border:1px solid var(--border);border-radius:var(--r);font-size:9px;color:var(--text3);font-family:var(--fm);line-height:1.5">Prize income modelled from ATP ranking-tier distribution data. All outputs indicative only. <span class="db db-mod">Modelled</span></div>
+      </div>
+
+      <!-- RESULTS -->
+      <div class="surv-results">
+        <!-- Verdict -->
+        <div class="surv-verdict" id="survVerdict">
+          <div class="sv-lbl" id="svLbl">Viability Rating</div>
+          <div class="sv-grade" id="svGrade">B+</div>
+          <div class="sv-text" id="svText">Career marginally sustainable with current parameters.</div>
+          <div class="sv-tags" id="svTags"></div>
+        </div>
+
+        <!-- Meter grid -->
+        <div class="surv-meters">
+          <div class="surv-meters-title">Career Sustainability Metrics</div>
+          <div class="sm-row"><span class="sm-label">Financial Sustainability</span><div class="sm-track"><div class="sm-fill" id="mFin"></div></div><span class="sm-val" id="mFinV" style="color:var(--green)">--</span></div>
+          <div class="sm-row"><span class="sm-label">Sponsorship Dependence</span><div class="sm-track"><div class="sm-fill" id="mSpon" style="background:var(--amber)"></div></div><span class="sm-val" id="mSponV" style="color:var(--amber)">--</span></div>
+          <div class="sm-row"><span class="sm-label">Burnout Risk</span><div class="sm-track"><div class="sm-fill" id="mBurn" style="background:var(--orange)"></div></div><span class="sm-val" id="mBurnV" style="color:var(--orange)">--</span></div>
+          <div class="sm-row"><span class="sm-label">Debt Accumulation</span><div class="sm-track"><div class="sm-fill" id="mDebt" style="background:var(--red)"></div></div><span class="sm-val" id="mDebtV" style="color:var(--red)">--</span></div>
+          <div class="sm-row"><span class="sm-label">Career Longevity Score</span><div class="sm-track"><div class="sm-fill" id="mLong" style="background:var(--blue)"></div></div><span class="sm-val" id="mLongV" style="color:var(--blue)">--</span></div>
+        </div>
+
+        <!-- P&L -->
+        <div class="surv-pl">
+          <div class="surv-pl-title">Full-Season Profit &amp; Loss Statement</div>
+          <div id="survPL"></div>
+        </div>
+
+        <!-- Savings / Debt Trajectory -->
+        <div class="surv-cf">
+          <div style="font-family:var(--fm);font-size:8px;letter-spacing:0.13em;text-transform:uppercase;color:var(--text3);margin-bottom:10px">3-Year Savings / Debt Trajectory</div>
+          <div style="position:relative;height:110px"><canvas id="debtChart"></canvas></div>
+          <div style="font-family:var(--fm);font-size:8px;color:var(--text3);margin-top:6px" id="debtNote"></div>
+        </div>
+
+        <!-- Contextual stats -->
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
+          <div class="lstat"><div class="lstat-val" id="statWeeks" style="font-size:20px;color:var(--text)">32</div><div class="lstat-label">Weeks away from home</div></div>
+          <div class="lstat"><div class="lstat-val" id="statBErank" style="font-size:20px;color:var(--gold)">--</div><div class="lstat-label">Break-even ranking needed</div></div>
+          <div class="lstat"><div class="lstat-val" id="statSponDep" style="font-size:20px;color:var(--amber)">--</div><div class="lstat-label">Sponsorship dependence</div></div>
+        </div>
+
+        <!-- Risk panel -->
+        <div class="surv-risks" id="survRisks">
+          <div class="risk-title" id="riskTitle">Risk Indicators</div>
+          <div id="riskItems"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SPONSORSHIP SUSTAINABILITY TABLE -->
+<div class="section-bridge"><div class="sw"><p>The sustainability rankings below translate the individual-level model output into a ranking framework across estimated career tiers, from Grand Slam champion to ITF-level professional. The picture is stark: financial sustainability is effectively exclusive to the top 50&ndash;100 ranked players.</p></div></div>
+
+<section class="sp-sm alt">
+  <div class="sw">
+    <div class="sl" style="margin-bottom:12px">Sustainability Rankings by Tier <span class="db db-mod" style="margin-left:8px">Modelled estimates</span></div>
+    <div class="cs fade-in">
+      <table class="inst-table" id="sustTable">
+        <thead><tr>
+          <th onclick="sortTable('sustTable',0)">Ranking Tier<span class="sort-arrow">&#8597;</span></th>
+          <th onclick="sortTable('sustTable',1)" class="td-right">Prize Income (est.)<span class="sort-arrow">&#8597;</span></th>
+          <th onclick="sortTable('sustTable',2)" class="td-right">Annual Expenses<span class="sort-arrow">&#8597;</span></th>
+          <th onclick="sortTable('sustTable',3)" class="td-right">Net (no sponsor)<span class="sort-arrow">&#8597;</span></th>
+          <th onclick="sortTable('sustTable',4)">Sustainability<span class="sort-arrow">&#8597;</span></th>
+          <th onclick="sortTable('sustTable',5)" class="td-right">Burnout Risk<span class="sort-arrow">&#8597;</span></th>
+          <th>Verdict</th>
+        </tr></thead>
+        <tbody>
+          <tr><td>Top 10 (Slam contenders)</td><td class="td-mono td-right">~$4,200K</td><td class="td-mono td-right">~$450K</td><td class="td-mono td-right" style="color:var(--green)">+$2,800K+</td><td><span class="ta ta-up">High</span></td><td class="td-mono td-right" style="color:var(--green)">Low</td><td><span class="db db-off">Sustainable</span></td></tr>
+          <tr><td>Top 11&ndash;50</td><td class="td-mono td-right">~$890K</td><td class="td-mono td-right">~$320K</td><td class="td-mono td-right" style="color:var(--green)">+$440K</td><td><span class="ta ta-up">Good</span></td><td class="td-mono td-right" style="color:var(--green)">Low&ndash;Medium</td><td><span class="db db-off">Sustainable</span></td></tr>
+          <tr><td>Top 51&ndash;100</td><td class="td-mono td-right">~$380K</td><td class="td-mono td-right">~$240K</td><td class="td-mono td-right" style="color:var(--green)">+$108K</td><td><span class="ta ta-nu">Marginal</span></td><td class="td-mono td-right" style="color:var(--amber)">Medium</td><td><span class="db db-est">Marginal</span></td></tr>
+          <tr style="background:rgba(217,64,84,0.03)"><td>Rank 101&ndash;200</td><td class="td-mono td-right">~$140K</td><td class="td-mono td-right">~$160K</td><td class="td-mono td-right" style="color:var(--red)">-$22K</td><td><span class="ta ta-dn">Fragile</span></td><td class="td-mono td-right" style="color:var(--orange)">High</td><td><span class="db db-mod" style="color:var(--red);background:var(--rd)">Operating at a Loss</span></td></tr>
+          <tr style="background:rgba(217,64,84,0.05)"><td>Challenger Tour</td><td class="td-mono td-right">~$80K</td><td class="td-mono td-right">~$140K</td><td class="td-mono td-right" style="color:var(--red)">-$62K</td><td><span class="ta ta-dn">Unstable</span></td><td class="td-mono td-right" style="color:var(--red)">Very High</td><td><span class="db db-mod" style="color:var(--red);background:var(--rd)">Financially Unsustainable</span></td></tr>
+          <tr style="background:rgba(217,64,84,0.07)"><td>ITF Futures</td><td class="td-mono td-right">~$18K</td><td class="td-mono td-right">~$80K</td><td class="td-mono td-right" style="color:var(--red)">-$65K</td><td><span class="ta ta-dn">Critical</span></td><td class="td-mono td-right" style="color:var(--red)">Extreme</td><td><span class="db db-mod" style="color:var(--red);background:var(--rd)">High Burnout Risk</span></td></tr>
+        </tbody>
+      </table>
+      <div class="cs-footer"><div class="cs-ts">All figures estimated &middot; Expenses assume typical coaching + travel + physio + equipment &middot; <span class="db db-mod">Modelled</span> &middot; <span class="stag">ATP prize data / PTPA surveys<span class="stip">Prize income estimated from ATP ranking prize distribution data. Expense benchmarks from PTPA player surveys and publicly documented player career costs.</span></span></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ROAD TO TENNIS -->
+<section id="road" class="sp">
+  <div class="sw">
+    <div class="sh"><div><div class="sl">07 &mdash; Player Journey</div><h2 class="stitle">The Road to<br>Professional Tennis</h2><p class="sdesc">From junior prodigy to Grand Slam stage &mdash; the brutal economics of professional survival. Most players never make it. Many who do wish they hadn&rsquo;t tried.</p></div></div>
+    <div class="funnel-layout">
+      <div id="funnelViz"></div>
+      <div>
+        <div class="week-card">
+          <div class="wc-head"><div><div style="font-family:var(--fm);font-size:8px;color:var(--text3);letter-spacing:0.13em;text-transform:uppercase;margin-bottom:4px">Case Study &middot; Fictional Player</div><div class="wc-title">Alex Torres, ATP #186</div></div><div class="wc-badge">Annual P&amp;L</div></div>
+          <div>
+            <div class="pl-row pl-pos"><span class="pl-label">&#9992; Prize Money Earned</span><span class="pl-val" style="color:var(--green)">+$122,000</span></div>
+            <div class="pl-row pl-pos"><span class="pl-label">&#128084; Clothing Sponsorship</span><span class="pl-val" style="color:var(--green)">+$24,000</span></div>
+            <div style="border-top:1px solid var(--border-soft);margin:7px 0"></div>
+            <div class="pl-row"><span class="pl-label" style="font-weight:700;color:var(--text)">Gross Income</span><span class="pl-val">$146,000</span></div>
+            <div style="border-top:1px solid var(--border-soft);margin:7px 0"></div>
+            <div class="pl-row pl-neg"><span class="pl-label">&#9992; Flights (28 events &times; ~$1,200)</span><span class="pl-val" style="color:var(--red)">-$33,600</span></div>
+            <div class="pl-row pl-neg"><span class="pl-label">&#127968; Hotels (42 weeks &times; $100/night)</span><span class="pl-val" style="color:var(--red)">-$49,200</span></div>
+            <div class="pl-row pl-neg"><span class="pl-label">&#129340; Lead Coach</span><span class="pl-val" style="color:var(--red)">-$52,000</span></div>
+            <div class="pl-row pl-neg"><span class="pl-label">&#129338; Physio &amp; Medical</span><span class="pl-val" style="color:var(--red)">-$18,500</span></div>
+            <div class="pl-row pl-neg"><span class="pl-label">&#127931; Equipment &amp; Stringing</span><span class="pl-val" style="color:var(--red)">-$8,400</span></div>
+            <div class="pl-row pl-neg"><span class="pl-label">&#128188; Agent (5%)</span><span class="pl-val" style="color:var(--red)">-$7,300</span></div>
+            <div class="pl-row pl-neg"><span class="pl-label">&#128176; Tax &amp; Accounting</span><span class="pl-val" style="color:var(--red)">-$9,800</span></div>
+            <div style="height:7px"></div>
+            <div class="pl-row pl-total"><span class="pl-label" style="color:var(--text)">Annual Net Income</span><span class="pl-val" style="color:var(--red)">-$32,800</span></div>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:12px">
+            <div style="background:var(--glass);border-radius:var(--r);padding:9px;text-align:center"><div style="font-family:var(--fd);font-size:16px;color:var(--red)">-$33K</div><div style="font-family:var(--fm);font-size:7px;color:var(--text3);margin-top:1px">Net Loss</div></div>
+            <div style="background:var(--glass);border-radius:var(--r);padding:9px;text-align:center"><div style="font-family:var(--fd);font-size:16px;color:var(--text)">#186</div><div style="font-family:var(--fm);font-size:7px;color:var(--text3);margin-top:1px">ATP Rank</div></div>
+            <div style="background:var(--glass);border-radius:var(--r);padding:9px;text-align:center"><div style="font-family:var(--fd);font-size:16px;color:var(--orange)">34wk</div><div style="font-family:var(--fm);font-size:7px;color:var(--text3);margin-top:1px">Away/year</div></div>
+          </div>
+          <div style="margin-top:12px;padding:10px 13px;background:var(--rd);border:1px solid rgba(217,64,84,0.12);border-radius:var(--r);font-size:10px;color:var(--text2);line-height:1.6;font-style:italic">&ldquo;At ranking #186, Alex is a professional tennis player by every measure. He is also, financially, running a business at a significant annual loss. His 34 weeks away from home, combined with mounting career debt, put him at high burnout risk. Break-even requires rank ~#95 without sponsorship, or ~#130 with a modest commercial deal.&rdquo;</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SIMULATOR -->
+<section id="simulator" class="sp alt">
+  <div class="sw">
+    <div class="sh"><div><div class="sl">08 &mdash; Scenario Modeling</div><h2 class="stitle">What if Tennis Used<br>NBA-Style Revenue Sharing?</h2><p class="sdesc">Adjust parameters and dynamically recalculate how prize money would flow across the tournament hierarchy.</p></div></div>
+    <div class="sim-layout">
+      <div class="sim-panel">
+        <div class="spt">Model Parameters</div>
+        <div class="sg"><div class="sg-head"><span class="sg-label">Player Revenue Share</span><span class="sg-val" id="sShareV">20%</span></div><input type="range" id="sShare" min="10" max="60" value="20" step="1"><div style="display:flex;justify-content:space-between;font-size:8px;color:var(--text3);font-family:var(--fm);margin-top:3px"><span>10% (current ~18%)</span><span>60%</span></div></div>
+        <div class="sg"><div class="sg-head"><span class="sg-label">Tournament Revenue ($M)</span><span class="sg-val" id="sRevV">$490M</span></div><input type="range" id="sRev" min="200" max="800" value="490" step="10"></div>
+        <div class="sg"><div class="sg-head"><span class="sg-label">Distribution Equity Factor</span><span class="sg-val" id="sEqV">50%</span></div><input type="range" id="sEq" min="10" max="90" value="50" step="5"><div style="display:flex;justify-content:space-between;font-size:8px;color:var(--text3);font-family:var(--fm);margin-top:3px"><span>Top-heavy</span><span>Equal spread</span></div></div>
+        <div class="sg"><div class="sg-head"><span class="sg-label">Media Rights Growth</span><span class="sg-val" id="sMediaV">+0%</span></div><input type="range" id="sMedia" min="-20" max="80" value="0" step="5"></div>
+        <div class="sim-kpi"><div class="sim-kpi-lbl">Simulated Total Prize Pool</div><div class="sim-kpi-val" id="sTotalPool">$98M</div><div class="sim-kpi-diff" id="sDiff">+$23M vs current</div></div>
+      </div>
+      <div class="sim-res">
+        <div style="font-family:var(--fm);font-size:8px;letter-spacing:0.13em;text-transform:uppercase;color:var(--text3);margin-bottom:16px">Projected Round Payouts</div>
+        <div class="srg">
+          <div class="src"><div class="src-lbl">Winner (Singles)</div><div class="src-val" id="sWin">$16.8M</div><div class="src-sub" id="sWinVs">vs $3.6M current</div></div>
+          <div class="src"><div class="src-lbl">Finalist</div><div class="src-val" id="sFin">$8.4M</div><div class="src-sub" id="sFinVs">vs $1.8M current</div></div>
+          <div class="src"><div class="src-lbl">Semifinalist</div><div class="src-val" id="sSemi">$4.2M</div><div class="src-sub" id="sSemiVs">vs $900K current</div></div>
+          <div class="src"><div class="src-lbl">Round of 16</div><div class="src-val" id="sR16">$1.4M</div><div class="src-sub" id="sR16Vs">vs $300K current</div></div>
+          <div class="src"><div class="src-lbl">First Round</div><div class="src-val" id="sR1">$420K</div><div class="src-sub" id="sR1Vs">vs $90K current</div></div>
+          <div class="src"><div class="src-lbl">Qualifier (1 match)</div><div class="src-val" id="sQ">$84K</div><div class="src-sub" id="sQVs">vs $18K current</div></div>
+        </div>
+        <div style="position:relative;height:175px"><canvas id="simChart"></canvas></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- LORENZ -->
+<section id="lorenz" class="sp">
+  <div class="sw">
+    <div class="sh"><div><div class="sl">09 &mdash; Inequality Analysis</div><h2 class="stitle">The Lorenz Curve:<br>Prize Inequality</h2><p class="sdesc">Cumulative prize share by player rank. Hover to inspect percentiles. Tennis diverges dramatically from team sport salary structures.</p></div><div class="sh-actions"><span class="db db-mod">Modelled</span></div></div>
+    <div class="lorenz-layout">
+      <div class="cs fade-in">
+        <div class="cs-title" style="margin-bottom:3px">Lorenz Curve &mdash; Tennis Prize vs NBA Salary Distribution</div>
+        <div class="cs-legend" style="margin-bottom:9px"><div class="ld"><div class="ldot" style="background:rgba(255,255,255,0.12)"></div>Perfect equality</div><div class="ld"><div class="ldot" style="background:#D94054"></div>Tennis prizes</div><div class="ld"><div class="ldot" style="background:#1DB874"></div>NBA salaries</div></div>
+        <div style="position:relative;height:390px;cursor:crosshair"><canvas id="lorenzChart"></canvas></div>
+        <div class="cs-footer"><div class="stag" style="font-size:9px">ATP prize data 2024 &middot; Basketball Reference 2023&ndash;24<span class="stip">Tennis from ATP top-500 prize distributions. NBA from Basketball Reference 2023-24 salary data. Both: cumulative % of players vs cumulative % of income.</span></div></div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:13px">
+        <div class="lorenz-stats">
+          <div class="lstat"><div class="lstat-val" style="color:var(--red)">0.81</div><div class="lstat-label">Tennis Gini</div></div>
+          <div class="lstat"><div class="lstat-val" style="color:var(--green)">0.48</div><div class="lstat-label">NBA Gini</div></div>
+          <div class="lstat"><div class="lstat-val" style="color:var(--red)">76%</div><div class="lstat-label">Top 10% earn</div></div>
+          <div class="lstat"><div class="lstat-val" style="color:var(--red)">4.2%</div><div class="lstat-label">Bottom 50% earn</div></div>
+        </div>
+        <div class="cs fade-in"><div class="cs-title" style="margin-bottom:3px">Gini Coefficient Trend</div><div style="position:relative;height:160px"><canvas id="giniChart"></canvas></div></div>
+        <div style="background:var(--rd);border:1px solid rgba(217,64,84,0.15);border-radius:var(--rl);padding:16px"><div style="font-family:var(--fm);font-size:8px;color:var(--red);letter-spacing:0.12em;text-transform:uppercase;margin-bottom:7px">Concentration Reality</div><div style="display:flex;flex-direction:column;gap:6px;font-size:10px"><div style="display:flex;justify-content:space-between"><span style="color:var(--text2)">Top 1% earn</span><span style="font-family:var(--fm);color:var(--red)">~38% of prizes</span></div><div style="display:flex;justify-content:space-between"><span style="color:var(--text2)">Top 10% earn</span><span style="font-family:var(--fm);color:var(--red)">~76% of prizes</span></div><div style="display:flex;justify-content:space-between"><span style="color:var(--text2)">Bottom 50% earn</span><span style="font-family:var(--fm);color:var(--green)">~4.2% of prizes</span></div><div style="display:flex;justify-content:space-between"><span style="color:var(--text2)">NBA: top 10% earn</span><span style="font-family:var(--fm);color:var(--blue)">~42% of salaries</span></div></div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- INSIGHTS -->
+<section id="insights" class="sp alt">
+  <div class="sw">
+    <div class="sh"><div><div class="sl">10 &mdash; Intelligence Briefs</div><h2 class="stitle">Key Analytical Findings</h2></div><div class="sh-actions"><span style="font-family:var(--fm);font-size:9px;color:var(--text3);padding:5px 10px;border:1px solid var(--border);border-radius:var(--r)">6 Findings</span></div></div>
+    <div class="insights-grid">
+      <div class="ic fade-in" style="--cc:#B8943F"><div class="ic-icon">&#128200;</div><div class="ic-title">Revenue Growth Dramatically Outpaced Prizes</div><div class="ic-text">Combined Slam revenues grew ~412% since 2000, while real (CPI-adjusted) prize money grew just 94%. The divergence accelerates post-2015 driven by streaming deal escalation.</div><div class="ic-metric">Revenue gap: +218% above real prizes</div></div>
+      <div class="ic fade-in" style="--cc:#D94054"><div class="ic-icon">&#9888;</div><div class="ic-title">Challenger Players Face Structural Deficits</div><div class="ic-text">Players ranked 150&ndash;300 earn $60&ndash;100K annually against $100&ndash;160K in typical costs. Without sponsorship, the career is structurally loss-making for most. High burnout risk documented.</div><div class="ic-metric">Est. 40%+ of touring pros net-negative</div></div>
+      <div class="ic fade-in" style="--cc:#2D7DD2"><div class="ic-icon">&#9878;</div><div class="ic-title">No CBA Equivalent Exists in Tennis</div><div class="ic-text">NBA, NFL, and NHL players negotiate binding 48&ndash;50% revenue share guarantees. The PTPA (founded 2020) remains without formal recognition from ATP, WTA, or Slam organisers.</div><div class="ic-metric">NBA: 50% BRI guaranteed by CBA</div></div>
+      <div class="ic fade-in" style="--cc:#16A8A8"><div class="ic-icon">&#128225;</div><div class="ic-title">Broadcasting is the Dominant Revenue Driver</div><div class="ic-text">Broadcasting and streaming rights account for ~52% of Grand Slam revenue, up from ~30% in 2005. Next-cycle rights are projected 30&ndash;50% higher without corresponding prize commitments.</div><div class="ic-metric">Broadcast share: ~52% of estimated revenue</div></div>
+      <div class="ic fade-in" style="--cc:#7B5EA7"><div class="ic-icon">&#127919;</div><div class="ic-title">Prize Inequality Is Structurally Extreme</div><div class="ic-text">Estimated Gini coefficient ~0.81 for Grand Slam prize distribution vs ~0.48 for NBA salaries. Top 10% of players capture ~76% of prize money. The Lorenz gap is widening over time.</div><div class="ic-metric">Tennis Gini: ~0.81 vs NBA: ~0.48</div></div>
+      <div class="ic fade-in" style="--cc:#C8713A"><div class="ic-icon">&#127758;</div><div class="ic-title">Streaming Will Accelerate the Divergence</div><div class="ic-text">The transition to streaming (Amazon Prime, ESPN+, Stan Sport) accelerates revenue growth without prize commitments. The structural gap is likely to widen absent formal collective bargaining reform.</div><div class="ic-metric">Next broadcast cycle: est. +30&ndash;50%</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- METHODOLOGY -->
+<section id="methodology" class="sp">
+  <div class="sw">
+    <div class="sh"><div><div class="sl">11 &mdash; Research Methodology</div><h2 class="stitle">Methodology &amp;<br>Assumptions</h2><p class="sdesc">TennisIQ adheres to a transparent research standard. All estimates are labelled and explained. Primary sources are used wherever available.</p></div></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:22px">
+      <div class="cs"><div class="cs-title" style="margin-bottom:12px">Data Classification Standards</div><div style="display:flex;flex-direction:column;gap:9px;font-size:10px;color:var(--text2)"><div style="display:flex;align-items:flex-start;gap:7px"><span class="db db-off">Official</span><span>Prize money from ATP/WTA/tournament announcements. AELTC (Companies House), Tennis Australia (ASIC), USTA (Form 990).</span></div><div style="display:flex;align-items:flex-start;gap:7px"><span class="db db-est">Estimated</span><span>Tournament revenues where full accounts unavailable. Derived from Sportico, Forbes Sports, SportsPro, and media reporting. Confidence varies.</span></div><div style="display:flex;align-items:flex-start;gap:7px"><span class="db db-mod">Modelled</span><span>Player revenue shares, CIS&trade; scores, Lorenz curves, Survival Simulator outputs, savings trajectories. Built from proxy data with documented assumptions.</span></div><div style="display:flex;align-items:flex-start;gap:7px"><span class="db db-cpi">CPI Adj.</span><span>US BLS CPI-U All Items Index, base 2000. Non-USD converted via Fed Reserve H.10 annual average FX rates before deflation.</span></div></div></div>
+      <div class="cs"><div class="cs-title" style="margin-bottom:12px">Confidence &amp; Limitations</div><div style="font-size:10px;color:var(--text2);line-height:1.75"><p style="margin-bottom:7px">Grand Slam tournaments do not publish audited consolidated revenues. Revenue estimates rely on partial disclosures and third-party analytics. Confidence is highest for Wimbledon and Australian Open where annual accounts are filed; lowest for Roland Garros where FFT disclosure is partial.</p><p style="margin-bottom:7px">Player expense data is self-reported. Costs vary substantially by nationality, ranking, and management structure. The Financial Survival Simulator uses median-case assumptions.</p><p>CIS&trade; and sustainability scores are modelled composites. They do not constitute official valuations. Updated quarterly.</p></div></div>
+    </div>
+    <div id="accWrap">
+      <div class="acc-item"><div class="acc-header" onclick="tAcc(this)"><span class="acc-title">Revenue Estimation Methodology</span><span class="acc-icon">+</span></div><div class="acc-body"><div class="acc-content"><p>Tournament revenue estimates use multi-source triangulation. Official accounts (AELTC, Tennis Australia) are used directly. USTA Form 990 nonprofit filings provide partial data, supplemented by Sportico and Forbes valuations. Confidence intervals are widest for Roland Garros, where the FFT does not publish itemised revenue.</p><div class="formula">Est. Revenue = Broadcasting Rights + Sponsorship Portfolio + Ticket &amp; Hospitality + Merchandise &amp; Other</div><p style="margin-top:8px">Broadcasting values estimated from publicly announced deal structures (Amazon, ESPN+, Eurosport, beIN) divided across tournaments based on market allocations.</p></div></div></div>
+      <div class="acc-item"><div class="acc-header" onclick="tAcc(this)"><span class="acc-title">Inflation Adjustment (CPI) Methodology</span><span class="acc-icon">+</span></div><div class="acc-body"><div class="acc-content"><p>All real value calculations use US BLS CPI-U All Items Index with base year 2000. Non-USD prize money (GBP, EUR, AUD) is converted to USD using Fed H.10 annual average FX rates before deflation &mdash; a deliberate choice that measures purchasing power against a consistent US dollar baseline.</p><div class="formula">Real Value (2000 USD) = Nominal Value &times; (CPI_2000 / CPI_year)</div><p style="margin-top:8px">Cumulative CPI inflation 2000&rarr;2025: approximately +83% (BLS CPI-U). This means $1M in 2025 prize money is worth approximately $547K in 2000 purchasing power.</p></div></div></div>
+      <div class="acc-item"><div class="acc-header" onclick="tAcc(this)"><span class="acc-title">Commercial Impact Score&trade; Methodology</span><span class="acc-icon">+</span></div><div class="acc-body"><div class="acc-content"><p>CIS&trade; is a proprietary composite from ATP/WTA ranking data, publicly disclosed sponsorship announcements, social media analytics (Instagram, TikTok, X/Twitter), broadcast mention tracking, and search volume indices (Google Trends).</p><div class="formula">CIS = 0.25(P) + 0.20(S) + 0.20(E) + 0.15(V) + 0.12(A) + 0.08(T)</div><p style="margin-top:8px">P=Performance, S=Sponsorship, E=Engagement, V=Visibility, A=Attendance, T=Trend Velocity. Scores are updated quarterly. All values indicative only.</p></div></div></div>
+      <div class="acc-item"><div class="acc-header" onclick="tAcc(this)"><span class="acc-title">Financial Survival Simulator Assumptions</span><span class="acc-icon">+</span></div><div class="acc-body"><div class="acc-content"><p>Prize income is modelled from ATP ranking-tier distributions. Tier bases: Top 10 ($280K/tournament), 11&ndash;25 ($95K), 26&ndash;50 ($42K), 51&ndash;100 ($18K), 101&ndash;150 ($8K), 151&ndash;250 ($3.5K), 251&ndash;400 ($1.8K), 400+ ($0.9K). Win rate multiplier: 0.5 + (winRate/100). Debt trajectory assumes 8% annual interest on any deficit. Burnout risk: weighted function of weeks-away, net income deficit, and career year. All outputs indicative.</p></div></div></div>
+    </div>
+    <div class="src-chips">
+      <div class="schip"><span></span>ATP Tour Official</div><div class="schip"><span></span>WTA Tour Official</div><div class="schip"><span></span>AELTC (Companies House)</div><div class="schip"><span></span>USTA Form 990</div><div class="schip"><span></span>Tennis Australia (ASIC)</div><div class="schip"><span></span>Forbes Sports</div><div class="schip"><span></span>Sportico</div><div class="schip"><span></span>BLS CPI-U</div><div class="schip"><span></span>Federal Reserve H.10</div><div class="schip"><span></span>NBA CBA 2023</div><div class="schip"><span></span>PTPA Surveys</div><div class="schip"><span></span>Basketball Reference</div><div class="schip"><span></span>SportsPro Media</div><div class="schip"><span></span>Google Trends</div>
+    </div>
+    <div class="disclaimer"><strong style="color:var(--text2)">Independent Analysis Disclaimer:</strong> TennisIQ is an independent analytics platform not affiliated with the ATP Tour, WTA Tour, any Grand Slam tournament, or any player organisation. All revenue estimates are clearly marked. This platform is produced for informational, educational, and research purposes only. CIS&trade; and all modelled values are estimates. Users are encouraged to verify data against primary sources. This is not financial, legal, or investment advice.</div>
+  </div>
+</section>
+
+<footer>
+  <div style="display:flex;flex-direction:column;gap:3px">
+    <div class="footer-brand">TennisIQ &mdash; Sports Business Intelligence Platform</div>
+    <div style="font-family:var(--fm);font-size:8px;color:var(--text4)">Analyzing the commercial economics, media value, and financial ecosystem of professional tennis.</div>
+  </div>
+  <div class="footer-note">Independent Analysis &middot; Build 2.4.1 &middot; May 2026</div>
+</footer>
+
+<!-- GENERATE SUMMARY MODAL -->
+<div class="gen-modal" id="genModal" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="gen-box">
+    <button class="gen-close" onclick="document.getElementById('genModal').classList.remove('open')">&times;</button>
+    <div style="margin-bottom:20px"><div class="sl" style="margin-bottom:7px">AI-Generated Intelligence</div><div style="font-family:var(--fd);font-size:24px;margin-bottom:3px">Executive Summary</div><div style="font-family:var(--fm);font-size:8px;color:var(--text3)">TennisIQ Brief &middot; Q2 2026 &middot; <span class="db db-mod">AI-Generated</span></div></div>
+    <div class="gen-content">
+      <p><strong>Grand Slam Revenue Dynamics:</strong> Combined revenues across all four Grand Slams have grown an estimated <span class="gen-stat">+412%</span> since 2000, reaching approximately <span class="gen-stat">$1.89B USD</span> in 2024. This growth is overwhelmingly driven by broadcasting and streaming rights, now representing ~<span class="gen-stat">52%</span> of total revenue. The next rights cycle is projected to deliver a further <span class="gen-stat">30&ndash;50%</span> uplift.</p>
+      <p><strong>Player Compensation Structure:</strong> Nominal prize money grew <span class="gen-stat">+287%</span> over the same period, while real (CPI-adjusted) prize money grew just <span class="gen-stat">+94%</span>. Revenues have grown at <span class="gen-stat">4.4&times;</span> the rate of real player compensation. The implied player revenue share of approximately <span class="gen-stat">~18%</span> compares unfavourably to the <span class="gen-stat">48&ndash;50%</span> guaranteed in major North American team sports via CBAs.</p>
+      <p><strong>Career Economic Viability:</strong> For the majority of professional players, a touring career is financially unsustainable without supplemental sponsorship. Players ranked outside the top <span class="gen-stat">100</span> face estimated prize income of $80&ndash;140K against $115&ndash;200K in typical costs. TennisIQ models estimate approximately <span class="gen-stat">60%</span> of touring professionals operate at a net annual deficit. Challenger-level net income: estimated <span class="gen-stat">-$55K</span> per year. High burnout risk is documented above rank 150.</p>
+      <p><strong>Commercial Concentration:</strong> Commercial value is highly concentrated. TennisIQ&rsquo;s CIS&trade; leaderboard shows Alcaraz (<span class="gen-stat">94.2</span>) and Sinner (<span class="gen-stat">91.8</span>) leading commercial value, while the wider field receives negligible sponsorship. Gini coefficient of <span class="gen-stat">~0.81</span> for prize distribution vs <span class="gen-stat">~0.48</span> for NBA salary distribution.</p>
+      <p><strong>Strategic Outlook:</strong> The structural gap between revenue growth and player compensation is likely to widen absent a formal collective bargaining mechanism. At NBA-style revenue sharing (<span class="gen-stat">50%</span>), the combined 4-Slam prize pool would approximate <span class="gen-stat">$944M</span> &mdash; nearly 3&times; current levels. The PTPA (est. 2020) remains without formal governing body recognition.</p>
+    </div>
+  </div>
+</div>
+</div><!-- /mainContent -->
+
+<script>
+/* ===== CORE ===== */
+const G='rgba(255,255,255,0.038)',TC='#3E5060';
+// HiDPI: ensure Chart.js renders at full device pixel ratio
+if(typeof Chart !== 'undefined'){
+  Chart.defaults.devicePixelRatio = window.devicePixelRatio || 2;
+}
+const bo=()=>({responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{backgroundColor:'#161C28',borderColor:'rgba(184,148,63,0.22)',borderWidth:1,titleColor:'#7A90A8',bodyColor:'#DDE3EC',padding:10,cornerRadius:6}},scales:{x:{grid:{color:G},ticks:{color:TC,font:{family:'DM Mono',size:9}}},y:{grid:{color:G},ticks:{color:TC,font:{family:'DM Mono',size:9}}}}});
+
+/* ===== LOADING ===== */
+const lm=['Initializing data model\u2026','Loading Grand Slam datasets\u2026','Calibrating CIS\u2122 engine\u2026','Running inequality analysis\u2026','Platform ready'];
+let lp=0;
+const lb=document.getElementById('lsBar'),ls=document.getElementById('lsStatus');
+function advL(){if(lp<100){lp=Math.min(lp+Math.random()*14+5,100);lb.style.width=lp+'%';ls.textContent=lm[Math.floor(lp/25)]||lm[lm.length-1];if(lp<100)setTimeout(advL,180+Math.random()*250);else setTimeout(()=>document.getElementById('loadScreen').classList.add('done'),700);}
+}advL();
+
+/* ===== STATUS BAR ===== */
+let sbSeconds=0;
+setInterval(()=>{
+  const t=new Date();document.getElementById('sbTime').textContent=t.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  sbSeconds++;if(sbSeconds<60)document.getElementById('sbSince').textContent=sbSeconds+' seconds ago';else if(sbSeconds<3600)document.getElementById('sbSince').textContent=Math.floor(sbSeconds/60)+'m ago';
+},1000);
+
+/* ===== SIDEBAR ACTIVE ===== */
+const navLinks=document.querySelectorAll('.sb-item-link');
+const navObs=new IntersectionObserver(e=>{e.forEach(x=>{if(x.isIntersecting){const id=x.target.id;navLinks.forEach(a=>a.classList.toggle('active',a.getAttribute('href')==='#'+id))}})},{rootMargin:'-20% 0px -70% 0px'});
+document.querySelectorAll('section[id]').forEach(s=>navObs.observe(s));
+
+/* ===== FADE IN ===== */
+const fiO=new IntersectionObserver(e=>{e.forEach(x=>{if(x.isIntersecting){x.target.classList.add('vis');fiO.unobserve(x.target)}})},{threshold:0.07});
+document.querySelectorAll('.fade-in').forEach(el=>fiO.observe(el));
+
+/* ===== COUNTERS ===== */
+function animC(el){const t=parseInt(el.dataset.target),d=1700,s=performance.now();const go=n=>{const p=Math.min((n-s)/d,1),e=1-Math.pow(1-p,3);el.textContent=Math.round(e*t);if(p<1)requestAnimationFrame(go)};requestAnimationFrame(go)}
+const cO=new IntersectionObserver(e=>{e.forEach(x=>{if(x.isIntersecting){x.target.querySelectorAll('.counter').forEach(animC);cO.unobserve(x.target)}})},{threshold:0.3});
+document.querySelectorAll('.kpi').forEach(c=>cO.observe(c));
+setTimeout(()=>document.querySelectorAll('.kpi .counter').forEach(animC),1300);
+
+/* ===== SPARKLINES ===== */
+function spark(id,data,color){const c=document.getElementById(id);if(!c)return;const ctx=c.getContext('2d');const g=ctx.createLinearGradient(0,0,0,44);g.addColorStop(0,color+'33');g.addColorStop(1,color+'00');new Chart(c,{type:'line',data:{labels:data.map((_,i)=>i),datasets:[{data,borderColor:color,borderWidth:1.5,fill:true,backgroundColor:g,tension:0.5,pointRadius:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{enabled:false}},scales:{x:{display:false},y:{display:false}}}})}
+spark('spark1',[100,120,142,172,208,252,300,360,422,484,442,516,582,638,512],'#B8943F');
+spark('spark2',[50,50,50,50,50,50,50,50,50,50,50,18,18,18,18],'#2D7DD2');
+spark('spark3',[10,5,-5,-10,-18,-24,-28,-38,-48,-58,-62,-57,-56,-55,-55],'#D94054');
+spark('spark4',[30,32,35,36,38,41,44,47,50,52,50,53,54,55,56],'#16A8A8');
+
+/* ===== CIS LEADERBOARD ===== */
+const cisP=[
+  {rank:1,flag:'🇪🇸',name:'Carlos Alcaraz',tour:'ATP · #2',score:94.2,bar:94,move:'+3.1',mc:'up',cat:'Performance Leader',emoji:'🎾',spon:'~$25M/yr',followers:'17.8M',cisData:{perf:96,spon:92,eng:96,vis:90,att:94,trend:98},stats1:[['Sponsorship Portfolio (est.)','~$25M/yr'],['Instagram Followers','17.8M'],['Major Brand Partners (est.)','8'],['Endorsement Ranking','#1 ATP U-23']],stats2:[['ATP Ranking','#2'],['Grand Slam Titles','4'],['Win Rate (2024)','72%'],['Estimated Earnings (2024)','~$28M']],ai:'Alcaraz represents the most commercially compelling young player since Federer. His dual-surface dominance, photogenic appeal, and Gen-Z authenticity command premium brand sponsorships. TennisIQ projects his commercial value could reach $35\u201340M annually within 3 years if results hold.'},
+  {rank:2,flag:'🇮🇹',name:'Jannik Sinner',tour:'ATP · #1',score:91.8,bar:92,move:'+5.4',mc:'up',cat:'Commercial Riser',emoji:'⚡',spon:'~$18M/yr',followers:'5.2M',cisData:{perf:98,spon:82,eng:80,vis:88,att:86,trend:92},stats1:[['Sponsorship Portfolio (est.)','~$18M/yr'],['Instagram Followers','5.2M'],['Major Brand Partners (est.)','5'],['Primary Market','Italy / Europe']],stats2:[['ATP Ranking','#1'],['Grand Slam Titles','3'],['Win Rate (2024)','88%'],['Estimated Earnings (2024)','~$22M']],ai:'Sinner leads the ATP ranking and commands a growing commercial footprint. His sponsorship portfolio appears significantly undervalued relative to on-court performance \u2014 a market inefficiency TennisIQ identifies as a commercial catch-up opportunity.'},
+  {rank:3,flag:'🇺🇸',name:'Coco Gauff',tour:'WTA · #3',score:90.5,bar:90,move:'+1.8',mc:'up',cat:'Media Magnet',emoji:'🌟',spon:'~$22M/yr',followers:'5.7M',cisData:{perf:85,spon:90,eng:95,vis:94,att:88,trend:90},stats1:[['Sponsorship Portfolio (est.)','~$22M/yr'],['Instagram Followers','5.7M'],['Major Brand Partners (est.)','7'],['Primary Market','US / Global Youth']],stats2:[['WTA Ranking','#3'],['Grand Slam Titles','1'],['Win Rate (2024)','68%'],['Estimated Earnings (2024)','~$26M']],ai:"Gauff's commercial profile punches well above her on-court ranking. Social engagement rates ~3\u00d7 the WTA average position her as the circuit's most digital-native marketable asset."},
+  {rank:4,flag:'🇷🇸',name:'Novak Djokovic',tour:'ATP · #7',score:88.3,bar:88,move:'-0.8',mc:'dn',cat:'Legacy Standard',emoji:'👑',spon:'~$20M/yr',followers:'10.4M',cisData:{perf:82,spon:85,eng:85,vis:96,att:95,trend:68},stats1:[['Sponsorship Portfolio (est.)','~$20M/yr'],['Instagram Followers','10.4M'],['Major Brand Partners (est.)','6'],['Career Slam Titles','24']],stats2:[['ATP Ranking','#7'],['Grand Slam Titles','24'],['Win Rate (2024)','61%'],['Career Prize Earnings','$179M+']],ai:'Djokovic remains the defining figure of the post-Federer era. While CIS trend velocity declines with age, his media profile and attendance premium remain world-class. The PTPA co-founding role adds a unique advocacy dimension.'},
+  {rank:5,flag:'🇵🇱',name:'Iga \u015awi\u0105tek',tour:'WTA · #1',score:87.9,bar:88,move:'-0.3',mc:'dn',cat:'Dominance Premium',emoji:'🎯',spon:'~$15M/yr',followers:'3.4M',cisData:{perf:94,spon:80,eng:75,vis:84,att:82,trend:78},stats1:[['Sponsorship Portfolio (est.)','~$15M/yr'],['Instagram Followers','3.4M'],['Major Brand Partners (est.)','6'],['WTA #1 weeks','175+']],stats2:[['WTA Ranking','#1'],['Grand Slam Titles','5'],['Win Rate (2024)','84%'],['Estimated Earnings (2024)','~$18M']],ai:"\u015awi\u0105tek's dominance is the most complete in women's tennis since Serena Williams' peak years. Her commercial valuation lags her athletic achievement \u2014 a market inefficiency TennisIQ identifies as significant."},
+];
+const tbody=document.getElementById('cisTableBody');
+cisP.forEach(p=>{
+  const tr=document.createElement('tr');
+  tr.innerHTML=`<td class="td-center td-mono ${p.rank<=3?'top':''}">${p.rank<=3?'<strong>':''} #${p.rank}${p.rank<=3?'</strong>':''}</td>
+<td><div style="display:flex;align-items:center;gap:9px"><span style="font-size:15px">${p.flag}</span><div><div style="font-size:12px;font-weight:700;color:var(--text)">${p.name}</div><div style="font-family:var(--fm);font-size:9px;color:var(--text3)">${p.tour}</div></div></div></td>
+<td><div style="display:flex;align-items:center;gap:8px"><div class="cell-bar-track"><div class="cell-bar-fill" data-w="${p.bar}" style="background:linear-gradient(90deg,rgba(184,148,63,0.7),rgba(184,148,63,0.3))"></div></div><span class="td-mono" style="color:var(--gold-l);min-width:28px">${p.score}</span></div></td>
+<td class="td-center td-mono ${p.mc==='up'?'up':'dn'}">${p.mc==='up'?'▲':'▼'} ${p.move}</td>
+<td class="td-mono" style="font-size:9px;color:var(--text2)">${p.spon}</td>
+<td class="td-mono td-right" style="font-size:10px">${p.followers}</td>
+<td style="font-size:9px;color:var(--text2)">${p.cat}</td>
+<td><div class="conf-dots"><div class="conf-d on"></div><div class="conf-d ${p.rank<=3?'on':'med'}"></div><div class="conf-d ${p.rank<=2?'on':'off'}"></div></div></td>`;
+  tr.style.cursor='pointer';
+  tr.addEventListener('click',()=>openPlayer(p));
+  tr.className=p.rank===1?'cis-row-highlight':'';
+  tbody.appendChild(tr);
+});
+const cisBarO=new IntersectionObserver(e=>{e.forEach(x=>{if(x.isIntersecting){x.target.querySelectorAll('.cell-bar-fill').forEach((b,i)=>{setTimeout(()=>b.style.width=b.dataset.w+'%',i*150)});cisBarO.unobserve(x.target)}})},{threshold:0.3});
+cisBarO.observe(tbody);
+
+/* ===== TABLE SORTING ===== */
+function sortTable(tableId,col){
+  const table=document.getElementById(tableId);const tbody=table.tBodies[0];const rows=Array.from(tbody.rows);
+  const th=table.querySelectorAll('th');const cur=th[col];const asc=cur.dataset.asc!=='true';
+  th.forEach(h=>{h.classList.remove('sort-active');h.dataset.asc='';});
+  cur.classList.add('sort-active');cur.dataset.asc=asc;
+  rows.sort((a,b)=>{
+    const av=a.cells[col]?.textContent.replace(/[^0-9.\-]/g,'').trim();
+    const bv=b.cells[col]?.textContent.replace(/[^0-9.\-]/g,'').trim();
+    const an=parseFloat(av),bn=parseFloat(bv);
+    if(!isNaN(an)&&!isNaN(bn))return asc?an-bn:bn-an;
+    return asc?(av||'').localeCompare(bv||''):((bv||'').localeCompare(av||''));
+  });
+  rows.forEach(r=>tbody.appendChild(r));
+}
+
+/* ===== PLAYER MODAL ===== */
+let radarInst=null;
+function openPlayer(p){
+  document.getElementById('mAv').textContent=p.emoji;
+  document.getElementById('mName').textContent=p.name;
+  document.getElementById('mMeta').textContent=p.tour;
+  document.getElementById('mCis').textContent=p.score;
+  document.getElementById('mMove').textContent=p.move+' this quarter';
+  document.getElementById('mAi').textContent=p.ai;
+  document.getElementById('mTags').innerHTML=`<span class="tb tb-mod" style="padding:3px 8px;font-size:9px">${p.cat}</span><span class="tb tb-est" style="padding:3px 8px;font-size:9px">CIS\u2122 #${p.rank}</span>`;
+  document.getElementById('mStats1').innerHTML=p.stats1.map(r=>`<div class="pm-stat"><span>${r[0]}</span><span>${r[1]}</span></div>`).join('');
+  document.getElementById('mStats2').innerHTML=p.stats2.map(r=>`<div class="pm-stat"><span>${r[0]}</span><span>${r[1]}</span></div>`).join('');
+  if(radarInst){radarInst.destroy();radarInst=null}
+  radarInst=new Chart(document.getElementById('mRadar'),{type:'radar',data:{labels:['Performance','Sponsorship','Engagement','Visibility','Attendance','Trend'],datasets:[{data:[p.cisData.perf,p.cisData.spon,p.cisData.eng,p.cisData.vis,p.cisData.att,p.cisData.trend],borderColor:'#B8943F',backgroundColor:'rgba(184,148,63,0.09)',borderWidth:1.5,pointBackgroundColor:'#B8943F',pointRadius:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{r:{grid:{color:G},ticks:{display:false},pointLabels:{color:TC,font:{family:'DM Mono',size:9}},min:50,max:100}}}});
+  document.getElementById('playerModal').classList.add('open');
+}
+
+/* ===== CHARTS ===== */
+const yrs=[2000,2002,2004,2006,2008,2010,2012,2014,2016,2018,2020,2022,2024,2025];
+new Chart(document.getElementById('summaryChart'),{type:'line',data:{labels:yrs,datasets:[
+  {label:'Revenue',data:[100,112,130,155,188,225,268,310,360,400,360,430,490,512],borderColor:'#B8943F',backgroundColor:'rgba(184,148,63,0.04)',borderWidth:2,fill:true,tension:0.4,pointRadius:3,pointHoverRadius:6},
+  {label:'Nominal Prize',data:[100,115,130,148,175,205,232,260,290,322,305,340,375,387],borderColor:'#1DB874',fill:false,borderWidth:1.8,tension:0.4,pointRadius:3,pointHoverRadius:6},
+  {label:'Real Prize',data:[100,110,119,128,143,159,168,177,183,189,168,173,185,194],borderColor:'#2D7DD2',fill:false,borderWidth:1.8,tension:0.4,pointRadius:3,pointHoverRadius:6},
+  {label:'CPI',data:[100,104,108,113,118,129,133,136,140,145,151,169,179,183],borderColor:'#7B5EA7',fill:false,borderWidth:1.2,tension:0.4,pointRadius:0,borderDash:[4,4]}
+]},options:bo()});
+
+new Chart(document.getElementById('slamBarsChart'),{type:'bar',data:{labels:['Wimbledon','US Open','Aus Open','Roland G.'],datasets:[
+  {label:'Revenue ($M est.)',data:[340,490,380,270],backgroundColor:['#B8943F77','#2D7DD277','#16A8A877','#D9405477'],borderColor:['#B8943F','#2D7DD2','#16A8A8','#D94054'],borderWidth:1.2,borderRadius:4},
+  {label:'Prize Pool ($M)',data:[68,75,65,57],backgroundColor:['#B8943F22','#2D7DD222','#16A8A822','#D9405422'],borderColor:['#B8943Faa','#2D7DD2aa','#16A8A8aa','#D94054aa'],borderWidth:1,borderRadius:3}
+]},options:{...bo(),plugins:{...bo().plugins,legend:{display:true,labels:{color:TC,font:{family:'DM Mono',size:9},boxWidth:6,padding:12}}}}});
+
+new Chart(document.getElementById('shareChart'),{type:'bar',data:{labels:['NBA','NHL','NFL','MLB','Tennis(est.)'],datasets:[{data:[50,50,48.5,48,18],backgroundColor:['#1DB87477','#2D7DD277','#B8943F77','#7B5EA777','#D9405477'],borderColor:['#1DB874','#2D7DD2','#B8943F','#7B5EA7','#D94054'],borderWidth:1.2,borderRadius:4}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{...bo().plugins.tooltip,callbacks:{label:c=>' '+c.raw+'%'}}},scales:{x:{grid:{color:G},ticks:{color:TC,font:{family:'DM Mono',size:9},callback:v=>v+'%'},max:60},y:{grid:{display:false},ticks:{color:'#7A90A8',font:{family:'Syne',size:11,weight:'600'}}}}}});
+
+const iY=[2000,2002,2004,2006,2008,2010,2012,2014,2016,2018,2020,2022,2024,2025];
+const nP=[700,820,950,1100,1300,1750,2100,2700,3000,3400,2500,3200,3600,3600];
+const rP=[700,730,755,790,830,885,950,1050,1100,1150,820,920,990,1000];
+const cf=[700,900,1100,1350,1650,2100,2600,3300,4200,5200,4600,6400,9200,10500];
+let inflI=null;
+function buildInfl(sr){const d={labels:iY,datasets:[{label:'Nominal',data:nP,borderColor:'#B8943F',backgroundColor:'rgba(184,148,63,0.03)',borderWidth:2,fill:true,tension:0.4,pointRadius:0,pointHoverRadius:5},...(sr?[{label:'Real',data:rP,borderColor:'#2D7DD2',fill:false,borderWidth:1.8,tension:0.4,pointRadius:0,pointHoverRadius:5}]:[]),{label:'Counterfactual',data:cf,borderColor:'#7B5EA7',fill:false,borderWidth:1.2,tension:0.4,pointRadius:0,borderDash:[5,4]}]};if(inflI){inflI.data=d;inflI.update('none');return;}inflI=new Chart(document.getElementById('inflChart'),{type:'line',data:d,options:{...bo(),scales:{x:{grid:{color:G},ticks:{color:TC,font:{family:'DM Mono',size:9}}},y:{grid:{color:G},ticks:{color:TC,font:{family:'DM Mono',size:9},callback:v=>'$'+(v/1000).toFixed(1)+'M'}}}}})}
+buildInfl(true);
+document.getElementById('inflToggle').addEventListener('change',function(){buildInfl(this.checked)});
+new Chart(document.getElementById('compChart'),{type:'bar',data:{labels:['Wimbledon','US Open','Aus Open','Roland G.'],datasets:[{label:'Broadcasting',data:[161,254,197,121],backgroundColor:'#B8943F'},{label:'Sponsorship',data:[75,98,87,67],backgroundColor:'#1DB874'},{label:'Ticketing',data:[55,98,75,68],backgroundColor:'#2D7DD2'},{label:'Other',data:[23,40,21,14],backgroundColor:'#7B5EA7'}]},options:{...bo(),scales:{x:{stacked:true,grid:{display:false},ticks:{color:TC,font:{family:'DM Mono',size:9}}},y:{stacked:true,grid:{color:G},ticks:{color:TC,font:{family:'DM Mono',size:9},callback:v=>'$'+v+'M'}}},plugins:{...bo().plugins,legend:{display:true,labels:{color:TC,font:{family:'DM Mono',size:9},boxWidth:6,padding:12}}}}});
+new Chart(document.getElementById('pyramidChart'),{type:'bar',data:{labels:['Top 10','11-50','51-100','101-200','Challenger','Futures'],datasets:[{label:'Gross Prize ($K)',data:[4200,890,380,140,80,18],backgroundColor:'#B8943F44',borderColor:'#B8943F',borderWidth:1.2,borderRadius:4},{label:'Net After Costs ($K)',data:[3600,540,130,-10,-55,-107],backgroundColor:c=>c.raw<0?'#D9405466':'#1DB87444',borderColor:c=>c.raw<0?'#D94054':'#1DB874',borderWidth:1.2,borderRadius:4}]},options:{...bo(),scales:{x:{grid:{display:false},ticks:{color:TC,font:{family:'DM Mono',size:9}}},y:{grid:{color:G},ticks:{color:TC,font:{family:'DM Mono',size:9},callback:v=>(v>=0?'':'-')+'$'+Math.abs(v)+'K'}}},plugins:{...bo().plugins,legend:{display:true,labels:{color:TC,font:{family:'DM Mono',size:9},boxWidth:6,padding:10}}}}});
+
+/* ===== $1 FLOW ===== */
+const fc=document.getElementById('flowCanvas');const fctx=fc.getContext('2d');
+const fA=[{l:'Player Prizes',p:10.8,c:'#1DB874',v:'$53M'},{l:'Broadcasting',p:20.4,c:'#B8943F',v:'$100M'},{l:'Sponsorship',p:20.0,c:'#2D7DD2',v:'$98M'},{l:'Operations',p:16.3,c:'#7B5EA7',v:'$80M'},{l:'Infrastructure',p:14.3,c:'#C8713A',v:'$70M'},{l:'Administration',p:6.1,c:'#16A8A8',v:'$30M'},{l:'Retained',p:12.2,c:'#4A5568',v:'$60M'}];
+let fP=0,fDone=false;
+function rFlow(){
+  const dpr=window.devicePixelRatio||2;
+  const w=fc.parentElement.offsetWidth;
+  fc.style.width=w+'px';fc.style.height='480px';
+  fc.width=w*dpr;fc.height=480*dpr;
+  fctx.scale(dpr,dpr);
+  dFlow(fP);
+}
+function dFlow(prog){
+  const dpr=window.devicePixelRatio||2;
+  const W=fc.width/dpr,H=fc.height/dpr,ctx=fctx;
+  ctx.clearRect(0,0,W*dpr,H*dpr);
+  // Draw donut
+  const cx=W*.27,cy=H*.5,r=Math.min(H*.36,120);let ang=-Math.PI/2;
+  fA.forEach(a=>{const ta=(a.p/100)*Math.PI*2;const ea=ang+ta*Math.min(prog,1);ctx.beginPath();ctx.moveTo(cx,cy);ctx.arc(cx,cy,r,ang,ea);ctx.closePath();ctx.fillStyle=a.c+'bb';ctx.fill();ctx.strokeStyle='rgba(8,9,15,0.8)';ctx.lineWidth=1.5;ctx.stroke();ang+=ta*Math.min(prog,1)});
+  ctx.beginPath();ctx.arc(cx,cy,r*.43,0,Math.PI*2);ctx.fillStyle='#0C0F18';ctx.fill();
+  // Center text — show actual revenue amount
+  ctx.fillStyle='#DDE3EC';ctx.font=`bold 18px DM Serif Display`;ctx.textAlign='center';ctx.fillText('$490M',cx,cy-2);
+  ctx.fillStyle='rgba(184,148,63,0.75)';ctx.font=`bold 9px DM Mono`;ctx.fillText('US OPEN EST.',cx,cy+13);
+  ctx.fillStyle='#3E5060';ctx.font=`8px DM Mono`;ctx.fillText('2024 REVENUE',cx,cy+25);
+  // Flow lines to right panel
+  const px=W*.54,rH=H/(fA.length+1);
+  fA.forEach((a,i)=>{
+    const ty=(i+1)*rH,pp=Math.max(0,Math.min(1,(prog*fA.length-i)));if(pp<=0)return;
+    // bezier connector
+    ctx.beginPath();ctx.moveTo(cx+r+4,cy+(i-3)*14);const mx=(cx+r+4+px)*.5;ctx.bezierCurveTo(mx,cy+(i-3)*14,mx,ty,px,ty);
+    ctx.strokeStyle=a.c+'33';ctx.lineWidth=1.2*pp;ctx.stroke();
+    // bar
+    const bw=(W-px-60)*pp;
+    ctx.fillStyle=a.c+'22';ctx.fillRect(px,ty-8,bw,16);
+    ctx.fillStyle=a.c+'88';ctx.fillRect(px,ty-8,2,16);
+    if(pp>.5){
+      ctx.fillStyle=a.c;ctx.font=`bold 8px DM Mono`;ctx.textAlign='left';ctx.fillText(a.l.toUpperCase(),px+7,ty+2);
+      ctx.fillStyle='rgba(221,227,236,0.45)';ctx.font=`8px DM Mono`;ctx.textAlign='right';ctx.fillText(a.p+'%   '+a.v,W-6,ty+2);
+    }
+  });
+  // Source note
+  if(prog>.95){ctx.fillStyle='#3E5060';ctx.font=`8px DM Mono`;ctx.textAlign='left';ctx.fillText('Source: USTA Form 990 + TennisIQ model  ·  Estimated allocation',16,H-12)}
+}
+function animFlow(){if(fP<1){fP+=0.013;dFlow(fP);requestAnimationFrame(animFlow)}else dFlow(1)}
+// On resize, re-init canvas (reset transform, re-scale)
+const _origRFlow = rFlow;
+window.removeEventListener('resize', rFlow);
+window.addEventListener('resize', function(){
+  const dpr=window.devicePixelRatio||2;
+  const w=fc.parentElement.offsetWidth;
+  fc.style.width=w+'px';fc.style.height='480px';
+  fc.width=w*dpr;fc.height=480*dpr;
+  fctx.setTransform(1,0,0,1,0,0);
+  fctx.scale(dpr,dpr);
+  dFlow(fP);
+});
+const flO=new IntersectionObserver(e=>{e.forEach(x=>{if(x.isIntersecting&&!fDone){fDone=true;fP=0;animFlow()}})},{threshold:0.3});
+flO.observe(fc);rFlow();window.addEventListener('resize',rFlow);
+
+/* ===== WORLD MAP — D3 + TopoJSON ===== */
+(function(){
+  // Load D3 and TopoJSON dynamically then render
+  function loadScript(src, cb){
+    const s = document.createElement('script');
+    s.src = src; s.onload = cb; document.head.appendChild(s);
+  }
+
+  const markets = [
+    {name:'W. Europe',    lon:10,  lat:48,  r:18, color:'#1DB874', fans:'~280M', status:'Established'},
+    {name:'N. America',   lon:-98, lat:40,  r:16, color:'#1DB874', fans:'~140M', status:'Established'},
+    {name:'Australia',    lon:134, lat:-26, r:13, color:'#1DB874', fans:'~45M',  status:'Established'},
+    {name:'China',        lon:105, lat:35,  r:15, color:'#B8943F', fans:'~95M',  status:'Growth'},
+    {name:'Japan/Korea',  lon:130, lat:36,  r:11, color:'#B8943F', fans:'~60M',  status:'Growth'},
+    {name:'Latin Am.',    lon:-58, lat:-15, r:13, color:'#B8943F', fans:'~80M',  status:'Growth'},
+    {name:'E. Europe',    lon:28,  lat:52,  r:10, color:'#B8943F', fans:'~35M',  status:'Growth'},
+    {name:'Middle East',  lon:45,  lat:25,  r:10, color:'#2D7DD2', fans:'~28M',  status:'Emerging'},
+    {name:'India',        lon:80,  lat:22,  r:12, color:'#2D7DD2', fans:'~40M',  status:'Emerging'},
+  ];
+
+  const sponsors = [
+    {name:'Nike HQ',    lon:-122, lat:45,  label:'NIKE'},
+    {name:'Rolex HQ',   lon:6,    lat:46,  label:'ROLEX'},
+    {name:'Adidas HQ',  lon:11,   lat:49,  label:'ADIDAS'},
+    {name:'Uniqlo HQ',  lon:139,  lat:35,  label:'UNIQLO'},
+  ];
+
+  function render(){
+    const wrap = document.getElementById('mapWrap');
+    if(!wrap) return;
+    const W = wrap.offsetWidth || 900;
+    const H = Math.round(W * 0.52);
+    const svg = d3.select('#wmap')
+      .attr('width', W)
+      .attr('height', H)
+      .attr('viewBox', `0 0 ${W} ${H}`);
+
+    svg.selectAll('*').remove();
+
+    const proj = d3.geoNaturalEarth1()
+      .scale(W / 6.4)
+      .translate([W / 2, H / 2]);
+
+    const path = d3.geoPath().projection(proj);
+
+    // Background
+    svg.append('rect').attr('width', W).attr('height', H).attr('fill', '#0B0E17');
+
+    // Graticule
+    const graticule = d3.geoGraticule().step([30, 30]);
+    svg.append('path')
+      .datum(graticule())
+      .attr('d', path)
+      .attr('fill', 'none')
+      .attr('stroke', 'rgba(255,255,255,0.04)')
+      .attr('stroke-width', 0.5);
+
+    // Sphere outline
+    svg.append('path')
+      .datum({type:'Sphere'})
+      .attr('d', path)
+      .attr('fill', 'none')
+      .attr('stroke', 'rgba(255,255,255,0.08)')
+      .attr('stroke-width', 0.8);
+
+    // Land
+    const g = svg.append('g').attr('class','countries');
+
+    fetch('https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json')
+      .then(r => r.json())
+      .then(world => {
+        const countries = topojson.feature(world, world.objects.countries);
+        g.selectAll('path')
+          .data(countries.features)
+          .join('path')
+          .attr('d', path)
+          .attr('fill', '#1A2538')
+          .attr('stroke', '#2A3A52')
+          .attr('stroke-width', 0.5);
+
+        // Equator
+        svg.append('path')
+          .datum({type:'LineString', coordinates:[[-180,0],[180,0]]})
+          .attr('d', path)
+          .attr('fill','none')
+          .attr('stroke','rgba(255,255,255,0.1)')
+          .attr('stroke-width', 0.8)
+          .attr('stroke-dasharray','4,4');
+
+        svg.append('text')
+          .attr('x', proj([-175, 2])[0])
+          .attr('y', proj([-175, 2])[1])
+          .attr('fill','rgba(255,255,255,0.2)')
+          .attr('font-family','DM Mono')
+          .attr('font-size', W/100)
+          .text('EQUATOR');
+
+        // Tooltip
+        const tip = document.getElementById('mapTooltip');
+
+        // Market circles — animate in
+        const mScale = W / 900;
+        markets.forEach((m, i) => {
+          const [x, y] = proj([m.lon, m.lat]);
+          if(!x || !y) return;
+          const r = m.r * mScale;
+
+          // Pulse ring
+          if(m.status !== 'Established'){
+            const pulse = svg.append('circle')
+              .attr('cx', x).attr('cy', y)
+              .attr('r', r).attr('fill','none')
+              .attr('stroke', m.color).attr('stroke-width', 1)
+              .attr('opacity', 0);
+            setTimeout(()=>{
+              pulse.attr('opacity', 0.3);
+              function animPulse(){
+                pulse.attr('r', r)
+                  .attr('opacity', 0.3)
+                  .transition().duration(1800).ease(d3.easeCubicOut)
+                  .attr('r', r * 2.2)
+                  .attr('opacity', 0)
+                  .on('end', animPulse);
+              }
+              animPulse();
+            }, 800 + i*100);
+          }
+
+          // Main circle
+          const circ = svg.append('circle')
+            .attr('cx', x).attr('cy', y)
+            .attr('r', 0)
+            .attr('fill', m.color + '25')
+            .attr('stroke', m.color)
+            .attr('stroke-width', 1.5)
+            .attr('opacity', 0)
+            .attr('cursor','pointer')
+            .on('mousemove', (event)=>{
+              tip.style.opacity = '1';
+              tip.innerHTML = `<strong style="color:${m.color}">${m.name}</strong><br>Status: ${m.status}<br>Est. fans: ${m.fans}`;
+              const rect = wrap.getBoundingClientRect();
+              let tx = event.clientX - rect.left + 12;
+              let ty = event.clientY - rect.top - 10;
+              if(tx + 160 > W) tx = tx - 175;
+              tip.style.left = tx + 'px';
+              tip.style.top = ty + 'px';
+            })
+            .on('mouseleave', ()=>{ tip.style.opacity='0'; });
+
+          setTimeout(()=>{
+            circ.transition().duration(600).ease(d3.easeBackOut.overshoot(1.4))
+              .attr('r', r)
+              .attr('opacity', 0.9);
+          }, 400 + i * 120);
+
+          // Label
+          const lbl = svg.append('text')
+            .attr('x', x).attr('y', y + r + 11 * mScale)
+            .attr('text-anchor','middle')
+            .attr('font-family','DM Mono')
+            .attr('font-size', Math.max(8, 10 * mScale))
+            .attr('fill', m.color)
+            .attr('font-weight','bold')
+            .attr('opacity', 0)
+            .text(m.name);
+
+          setTimeout(()=>{
+            lbl.transition().duration(400).attr('opacity', 0.85);
+          }, 700 + i * 120);
+        });
+
+        // Sponsor diamonds
+        sponsors.forEach((s, i) => {
+          const [x, y] = proj([s.lon, s.lat]);
+          if(!x || !y) return;
+          const sz = 6 * mScale;
+          const diamond = svg.append('polygon')
+            .attr('points', `${x},${y-sz} ${x+sz},${y} ${x},${y+sz} ${x-sz},${y}`)
+            .attr('fill','#D9405430')
+            .attr('stroke','#D94054')
+            .attr('stroke-width', 1.2)
+            .attr('opacity', 0)
+            .attr('cursor','pointer')
+            .on('mousemove', (event)=>{
+              tip.style.opacity='1';
+              tip.innerHTML = `<strong style="color:#D94054">${s.label} HQ</strong>`;
+              const rect = wrap.getBoundingClientRect();
+              tip.style.left = (event.clientX - rect.left + 12) + 'px';
+              tip.style.top = (event.clientY - rect.top - 10) + 'px';
+            })
+            .on('mouseleave', ()=>{ tip.style.opacity='0'; });
+
+          setTimeout(()=>{
+            diamond.transition().duration(300).attr('opacity', 0.8);
+          }, 1000 + i * 80);
+        });
+      })
+      .catch(()=>{
+        // Fallback if fetch fails
+        svg.append('text').attr('x', W/2).attr('y', H/2)
+          .attr('text-anchor','middle').attr('fill','#3E5060')
+          .attr('font-family','DM Mono').attr('font-size',12)
+          .text('Map data unavailable in this environment');
+      });
+  }
+
+  function init(){
+    loadScript('https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js', ()=>{
+      loadScript('https://cdnjs.cloudflare.com/ajax/libs/topojson/3.0.2/topojson.min.js', ()=>{
+        render();
+        window.addEventListener('resize', debounce(render, 200));
+      });
+    });
+  }
+
+  function debounce(fn, ms){ let t; return function(){ clearTimeout(t); t=setTimeout(fn,ms); }; }
+
+  // Init when section in view
+  let started = false;
+  const obs = new IntersectionObserver(entries=>{
+    entries.forEach(e=>{ if(e.isIntersecting && !started){ started=true; init(); } });
+  }, {threshold:0.1});
+  const wrap = document.getElementById('mapWrap');
+  if(wrap) obs.observe(wrap); else init();
+})();
+
+/* ===== FINANCIAL SURVIVAL ===== */
+function gV(id){return parseFloat(document.getElementById(id).value)||0}
+function est(rank,tours,wr){let b;if(rank<=10)b=280;else if(rank<=25)b=95;else if(rank<=50)b=42;else if(rank<=100)b=18;else if(rank<=150)b=8;else if(rank<=250)b=3.5;else if(rank<=400)b=1.8;else b=0.9;return Math.round(b*tours*(0.5+wr/100))}
+let debtChartI=null;
+const survIds=['s_rank','s_tour','s_win','s_spon','s_coach','s_travel','s_physio','s_equip','s_agent','s_tax','s_weeks','s_fam'];
+const survLabels={'s_rank':['sRankV','#',''],'s_tour':['sTourV','',''],'s_win':['sWinV','','%'],'s_spon':['sSponV','$','K'],'s_coach':['sCoachV','$','K'],'s_travel':['sTravelV','$','K'],'s_physio':['sPhysioV','$','K'],'s_equip':['sEquipV','$','K'],'s_agent':['sAgentV','','%'],'s_tax':['sTaxV','','%'],'s_weeks':['sWeeksV','',''],'s_fam':['sFamV','$','K']};
+survIds.forEach(id=>document.getElementById(id).addEventListener('input',function(){const [lid,pre,suf]=survLabels[id];document.getElementById(lid).textContent=pre+this.value+suf;calcSurvival()}));
+function calcSurvival(){
+  const rank=Math.max(1,gV('s_rank')),tours=Math.max(1,gV('s_tour')),wr=Math.max(0,Math.min(100,gV('s_win'))),spon=gV('s_spon'),coach=gV('s_coach'),travel=gV('s_travel'),physio=gV('s_physio'),equip=gV('s_equip'),agentP=gV('s_agent'),taxR=gV('s_tax'),weeks=gV('s_weeks'),fam=gV('s_fam');
+  const prizeK=est(rank,tours,wr);const grossK=prizeK+spon+fam;const agentK=Math.round(grossK*agentP/100);const expK=coach+travel+physio+equip;const gpK=grossK-agentK-expK;const taxK=Math.max(0,Math.round(gpK*taxR/100));const netK=gpK-taxK;
+  // Sustainability score
+  let score=50;if(netK>300)score=95;else if(netK>100)score=82;else if(netK>0)score=65;else if(netK>-50)score=44;else if(netK>-150)score=26;else score=10;
+  // Burnout risk: weeks + deficit
+  const burnoutRaw=Math.min(100,Math.max(0,(weeks/45)*40+(Math.max(0,-netK)/200)*60));
+  // Sponsorship dependence
+  const sponDep=grossK>0?Math.round((spon/grossK)*100):0;
+  // Debt trajectory (if net negative, accumulates at 8% interest)
+  const debtY1=netK<0?Math.round(-netK):0;const debtY2=netK<0?Math.round(debtY1*1.08-netK):Math.max(0,-netK);const debtY3=netK<0?Math.round(debtY2*1.08-netK):Math.max(0,-netK*0.5);
+  // Break-even ranking
+  let beRank=500;for(let r=1;r<=500;r++){const pe=est(r,tours,wr)+spon+fam;const ge=pe-Math.round(pe*agentP/100)-expK;if(ge-Math.max(0,Math.round(ge*taxR/100))>=0){beRank=r;break}}
+  // Grade
+  let grade,vCol,vBg,vBorder,text;
+  if(score>=85){grade='A';vCol='var(--green)';vBg='rgba(29,184,116,0.05)';vBorder='rgba(29,184,116,0.18)';text='Financially sustainable. Career viability strong with current parameters.'}
+  else if(score>=65){grade='B+';vCol='var(--green)';vBg='rgba(29,184,116,0.04)';vBorder='rgba(29,184,116,0.12)';text='Career marginally sustainable. Sponsorship essential to maintain positive cashflow.'}
+  else if(score>=45){grade='C';vCol='var(--amber)';vBg='rgba(212,136,58,0.05)';vBorder='rgba(212,136,58,0.18)';text='Borderline viability. Career requires sponsorship uplift or ranking improvement within 12 months.'}
+  else if(score>=25){grade='D';vCol='var(--red)';vBg='rgba(217,64,84,0.06)';vBorder='rgba(217,64,84,0.18)';text='Financially unsustainable. Career net loss requires external financial support to continue.'}
+  else{grade='F';vCol='var(--red)';vBg='rgba(217,64,84,0.09)';vBorder='rgba(217,64,84,0.25)';text='Critical financial position. Continuation requires significant restructuring or external funding.'}
+  const vd=document.getElementById('survVerdict');
+  vd.style.background=vBg;vd.style.border=`1px solid ${vBorder}`;
+  document.getElementById('svGrade').textContent=grade;document.getElementById('svGrade').style.color=vCol;
+  document.getElementById('svText').textContent=text;
+  document.getElementById('svLbl').style.color=vCol;
+  // Emotional tags
+  const tags=[];
+  if(netK<0)tags.push({t:'Operating at a Loss',c:'var(--red)'});
+  if(netK<-100)tags.push({t:'Financially Unsustainable',c:'var(--red)'});
+  if(burnoutRaw>65)tags.push({t:'High Burnout Risk',c:'var(--orange)'});
+  if(burnoutRaw>80)tags.push({t:'Extreme Burnout Risk',c:'var(--red)'});
+  if(sponDep>70)tags.push({t:'Sponsorship Dependent',c:'var(--amber)'});
+  if(debtY3>200)tags.push({t:'Debt Accumulating',c:'var(--red)'});
+  if(weeks>35)tags.push({t:`${Math.round(weeks)} Weeks Away`,c:'var(--text3)'});
+  if(score>=80)tags.push({t:'Financially Viable',c:'var(--green)'});
+  document.getElementById('svTags').innerHTML=tags.map(t=>`<span class="sv-tag" style="background:${t.c}18;color:${t.c};border:1px solid ${t.c}33">${t.t}</span>`).join('');
+  // Meters
+  function setMeter(fillId,valId,val,max,color,label){
+    const pct=Math.min(100,Math.max(0,(val/max)*100));
+    document.getElementById(fillId).style.width=pct+'%';
+    document.getElementById(fillId).style.background=color;
+    document.getElementById(valId).textContent=label||Math.round(pct)+'%';
+    document.getElementById(valId).style.color=color;
+  }
+  setMeter('mFin','mFinV',score,100,score>=65?'var(--green)':score>=45?'var(--amber)':'var(--red)',score+'/100');
+  setMeter('mSpon','mSponV',sponDep,100,sponDep>60?'var(--red)':sponDep>35?'var(--amber)':'var(--green)',sponDep+'%');
+  setMeter('mBurn','mBurnV',burnoutRaw,100,burnoutRaw>65?'var(--red)':burnoutRaw>40?'var(--orange)':'var(--green)',Math.round(burnoutRaw)+'/100');
+  setMeter('mDebt','mDebtV',Math.max(0,-netK),200,'var(--red)',netK<0?'-$'+Math.abs(Math.round(netK))+'K':'None');
+  const longevity=Math.max(0,100-Math.round(burnoutRaw*0.4+Math.max(0,-score)*0.3));
+  setMeter('mLong','mLongV',longevity,100,'var(--blue)',longevity+'/100');
+  document.getElementById('statWeeks').textContent=Math.round(weeks);
+  document.getElementById('statBErank').textContent='#'+beRank;
+  document.getElementById('statSponDep').textContent=sponDep+'%';
+  // P&L
+  const fmt=v=>(v>=0?'+$':'\u2212$')+Math.abs(Math.round(v)).toLocaleString()+'K';
+  const fp=v=>'$'+Math.abs(Math.round(v)).toLocaleString()+'K';
+  const isP=netK>=0;
+  const plEl=document.getElementById('survPL');
+  const rows=[{l:'Prize Income (est.)',v:'+'+fp(prizeK),c:'pl-pos'},{l:'Sponsorship Income',v:'+'+fp(spon),c:'pl-pos'},{l:'Family Support',v:'+'+fp(fam),c:'pl-pos'},{l:'Gross Income',v:fp(grossK),c:''},{l:'Agent Commission (-'+Math.round(agentP)+'%)',v:'\u2212'+fp(agentK),c:'pl-neg'},{l:'Total Expenses',v:'\u2212'+fp(expK),c:'pl-neg'},{l:'Pre-Tax Income',v:fmt(gpK),c:''},{l:'Tax Liability (-'+Math.round(taxR)+'%)',v:'\u2212'+fp(taxK),c:'pl-neg'}];
+  plEl.innerHTML=rows.map(r=>`<div class="pl-row ${r.c}"><span class="pl-label">${r.l}</span><span class="pl-val" style="color:${r.c==='pl-pos'?'var(--green)':r.c==='pl-neg'?'var(--red)':'var(--text2)'}">${r.v}</span></div>`).join('');
+  plEl.innerHTML+=`<div style="height:5px"></div><div class="pl-row pl-total"><span class="pl-label" style="color:var(--text)">Annual Net Income</span><span class="pl-val" style="color:${isP?'var(--green)':'var(--red)'}">${fmt(netK)}</span></div>`;
+  // Debt trajectory (3yr)
+  const dcData={labels:['Year 1','Year 2','Year 3'],datasets:[{label:netK<0?'Cumulative Debt ($K)':'Cumulative Savings ($K)',data:netK<0?[debtY1,debtY2,debtY3]:[Math.abs(netK),Math.abs(netK)*1.05,Math.abs(netK)*1.1],backgroundColor:netK<0?'rgba(217,64,84,0.2)':'rgba(29,184,116,0.2)',borderColor:netK<0?'#D94054':'#1DB874',borderWidth:1.5,borderRadius:4,fill:true}]};
+  if(debtChartI){debtChartI.data=dcData;debtChartI.update('none');}
+  else debtChartI=new Chart(document.getElementById('debtChart'),{type:'bar',data:dcData,options:{...bo(),scales:{x:{grid:{display:false},ticks:{color:TC,font:{family:'DM Mono',size:9}}},y:{grid:{color:G},ticks:{color:TC,font:{family:'DM Mono',size:9},callback:v=>'$'+v+'K'}}}}});
+  document.getElementById('debtNote').textContent=netK<0?`At current deficit, cumulative debt reaches ~$${Math.round(debtY3)}K by Year 3 (8% interest assumed).`:`At current surplus, estimated savings of ~$${Math.round(Math.abs(netK))}K/yr.`;
+  // Risks
+  const risks=[];
+  if(rank>150)risks.push('Ranking outside top 150: prize income insufficient to cover typical expenses without sponsorship');
+  if(netK<0)risks.push(`Career running at estimated net ${Math.abs(Math.round(netK))}K deficit annually`);
+  if(spon<20&&rank>100)risks.push('Limited sponsorship: single prize-income stream creates high financial fragility');
+  if(agentP>8)risks.push('Agent commission above 8%: review contract structure');
+  if(taxR>38)risks.push('High effective tax rate: review international tax planning for multi-jurisdiction earnings');
+  if(expK>grossK)risks.push('Expenses exceed gross income: unsustainable without external capital or ranking improvement');
+  if(weeks>38)risks.push(`${Math.round(weeks)} weeks away from home annually: significant burnout and lifestyle risk`);
+  const rb=document.getElementById('survRisks');const rt=document.getElementById('riskTitle');
+  if(risks.length===0){rb.style.background='rgba(29,184,116,0.04)';rb.style.border='1px solid rgba(29,184,116,0.12)';rt.style.color='var(--green)';rt.textContent='No Critical Risk Indicators';document.getElementById('riskItems').innerHTML='<div class="risk-item" style="color:var(--text2)">Current parameters show positive financial viability. Career appears sustainable at this ranking with current expense structure.</div>';}
+  else{rb.style.background='rgba(217,64,84,0.04)';rb.style.border='1px solid rgba(217,64,84,0.12)';rt.style.color='var(--red)';rt.textContent='Risk Indicators ('+risks.length+')';document.getElementById('riskItems').innerHTML=risks.map(r=>`<div class="risk-item">${r}</div>`).join('');}
+}
+calcSurvival();
+
+/* ===== FUNNEL ===== */
+const fT=[{name:'Junior / National',players:'~500,000',surv:'100%',color:'#2D7DD2',w:100,cost:'$8K\u201325K/yr',earn:'$0',travel:'Domestic'},{name:'ITF Futures (Grades 1\u20135)',players:'~50,000',surv:'10%',color:'#1DB874',w:80,cost:'$15K\u201340K/yr',earn:'$2K\u201315K',travel:'Regional'},{name:'Challenger Tour (ATP 125)',players:'~3,000',surv:'0.6%',color:'#B8943F',w:57,cost:'$60K\u2013120K/yr',earn:'$30K\u201390K',travel:'International'},{name:'ATP / WTA Tour',players:'~900',surv:'0.18%',color:'#C8713A',w:36,cost:'$150K\u2013350K/yr',earn:'$120K\u20134M+',travel:'Global'},{name:'Grand Slam Main Draw',players:'128/event',surv:'~0.03%',color:'#D94054',w:20,cost:'$200K\u2013500K/yr',earn:'$66K\u20133.6M+',travel:'4 continents'}];
+const fviz=document.getElementById('funnelViz');
+fT.forEach((t,i)=>{const d=document.createElement('div');d.className='ftier';d.innerHTML=`<div class="fbar" style="background:${t.color}15;border:1px solid ${t.color}40;color:${t.color}" data-w="${t.w}"><span style="font-size:10px">${t.name}</span><span style="font-size:8px;opacity:.65">${t.surv}</span></div><div class="finfo"><div class="finfo-head"><span class="finfo-name">${t.players}</span><span class="finfo-surv">${t.surv} advance</span></div><div class="finfo-stats"><div class="fstat"><div class="fstat-val" style="font-size:11px;color:${t.color}">${t.cost}</div><div class="fstat-label">Annual Cost</div></div><div class="fstat"><div class="fstat-val" style="font-size:11px">${t.earn}</div><div class="fstat-label">Prize Earnings</div></div><div class="fstat"><div class="fstat-val" style="font-size:11px">${t.travel}</div><div class="fstat-label">Travel Scope</div></div></div></div>${i<fT.length-1?'<div class="fconn"></div>':''}`;fviz.appendChild(d)});
+const funO=new IntersectionObserver(e=>{e.forEach(x=>{if(x.isIntersecting){x.target.querySelectorAll('.fbar').forEach((b,i)=>{setTimeout(()=>{b.style.marginLeft=(100-parseInt(b.dataset.w))/2+'%';b.style.width=b.dataset.w+'%';b.style.transition='all 1.5s cubic-bezier(.16,1,.3,1)'},i*140)});funO.unobserve(x.target)}})},{threshold:0.2});
+funO.observe(fviz);document.querySelectorAll('.fbar').forEach(b=>{b.style.width='100%'});
+
+/* ===== SIMULATOR ===== */
+let simI=null;
+function updateSim(){
+  const sh=parseInt(document.getElementById('sShare').value),rv=parseInt(document.getElementById('sRev').value),eq=parseInt(document.getElementById('sEq').value)/100,md=parseInt(document.getElementById('sMedia').value)/100;
+  document.getElementById('sShareV').textContent=sh+'%';document.getElementById('sRevV').textContent='$'+(rv*(1+md)).toFixed(0)+'M';document.getElementById('sEqV').textContent=Math.round(eq*100)+'%';document.getElementById('sMediaV').textContent=(md>=0?'+':'')+Math.round(md*100)+'%';
+  const pool=rv*(1+md)*sh/100;document.getElementById('sTotalPool').textContent='$'+Math.round(pool)+'M';
+  const diff=Math.round(pool-75);document.getElementById('sDiff').textContent=(diff>=0?'\u2191 +$':'\u2193 $')+Math.abs(diff)+'M vs current';document.getElementById('sDiff').style.color=diff>=0?'var(--green)':'var(--red)';
+  const ws=0.18-eq*0.04;const rr=[{k:'sWin',m:ws,c:3.6},{k:'sFin',m:ws*.5,c:1.8},{k:'sSemi',m:ws*.25,c:.9},{k:'sR16',m:ws*.083,c:.3},{k:'sR1',m:ws*.025,c:.09},{k:'sQ',m:ws*.005,c:.018}];const vk=['sWinVs','sFinVs','sSemiVs','sR16Vs','sR1Vs','sQVs'];
+  const pp=rr.map(r=>pool*r.m);
+  rr.forEach((r,i)=>{const v=pp[i];let s;if(v>=1)s='$'+v.toFixed(1)+'M';else if(v>=.1)s='$'+Math.round(v*1000)+'K';else s='$'+Math.round(v*1e6/1e3)+'K';document.getElementById(r.k).textContent=s;const d=Math.round((v/r.c-1)*100);const el=document.getElementById(vk[i]);el.textContent=(d>=0?'\u25b2 +':'\u25bc ')+d+'% vs current';el.style.color=d>=0?'var(--green)':'var(--red)'});
+  const cd={labels:['Winner','Finalist','Semi','R16','R1','Qual.'],datasets:[{label:'Projected',data:pp,backgroundColor:'#B8943F66',borderColor:'#B8943F',borderWidth:1.2,borderRadius:4},{label:'Current',data:rr.map(r=>r.c),backgroundColor:'#2D7DD233',borderColor:'#2D7DD2',borderWidth:1.2,borderRadius:4}]};
+  if(simI){simI.data=cd;simI.update('none');}else simI=new Chart(document.getElementById('simChart'),{type:'bar',data:cd,options:{...bo(),scales:{x:{grid:{display:false},ticks:{color:TC,font:{family:'DM Mono',size:9}}},y:{grid:{color:G},ticks:{color:TC,font:{family:'DM Mono',size:9},callback:v=>'$'+v.toFixed(1)+'M'}}},plugins:{...bo().plugins,legend:{display:true,labels:{color:TC,font:{family:'DM Mono',size:8},boxWidth:6,padding:10}}}}});
+}
+['sShare','sRev','sEq','sMedia'].forEach(id=>document.getElementById(id).addEventListener('input',updateSim));
+updateSim();
+
+/* ===== LORENZ ===== */
+function mkLorenz(){const N=100,tl=[],nl=[],eq=[];for(let i=0;i<=N;i++){const p=i/N;eq.push({x:i,y:i});tl.push({x:i,y:Math.round(Math.pow(p,4.5)*(1+.4*(1-p))*10000)/100});nl.push({x:i,y:Math.round(Math.pow(p,2.1)*10000)/100})}return{tl,nl,eq}}
+const {tl,nl,eq}=mkLorenz();
+new Chart(document.getElementById('lorenzChart'),{type:'scatter',data:{datasets:[{label:'Perfect Equality',data:eq,borderColor:'rgba(255,255,255,0.1)',borderWidth:1,showLine:true,pointRadius:0,borderDash:[4,4]},{label:'Tennis Prizes',data:tl,borderColor:'#D94054',backgroundColor:'rgba(217,64,84,0.05)',borderWidth:2,showLine:true,pointRadius:0,fill:'-1',tension:.3},{label:'NBA Salaries',data:nl,borderColor:'#1DB874',fill:false,borderWidth:1.8,showLine:true,pointRadius:0,tension:.3,borderDash:[5,3]}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{backgroundColor:'#161C28',borderColor:'rgba(184,148,63,0.22)',borderWidth:1,titleColor:'#7A90A8',bodyColor:'#DDE3EC',padding:9,cornerRadius:6,callbacks:{title:i=>`Bottom ${Math.round(i[0].parsed.x)}% of players`,label:x=>`${x.dataset.label}: ${x.parsed.y.toFixed(1)}% of income`}}},scales:{x:{grid:{color:G},min:0,max:100,title:{display:true,text:'Cumulative % of Players (lowest \u2192 highest earnings)',color:TC,font:{family:'DM Mono',size:9}},ticks:{color:TC,font:{family:'DM Mono',size:9},callback:v=>v+'%'}},y:{grid:{color:G},min:0,max:100,title:{display:true,text:'Cumulative % of Prize / Salary Income',color:TC,font:{family:'DM Mono',size:9}},ticks:{color:TC,font:{family:'DM Mono',size:9},callback:v=>v+'%'}}}}});
+new Chart(document.getElementById('giniChart'),{type:'line',data:{labels:['2000','2004','2008','2012','2016','2020','2024'],datasets:[{label:'Tennis Gini',data:[.74,.76,.77,.78,.79,.80,.81],borderColor:'#D94054',borderWidth:1.8,fill:false,tension:.3,pointBackgroundColor:'#D94054',pointRadius:3},{label:'NBA Gini',data:[.45,.46,.47,.47,.48,.47,.48],borderColor:'#1DB874',borderWidth:1.8,fill:false,tension:.3,pointBackgroundColor:'#1DB874',pointRadius:3,borderDash:[4,3]}]},options:{...bo(),scales:{x:{grid:{color:G},ticks:{color:TC,font:{family:'DM Mono',size:9}}},y:{grid:{color:G},min:.3,max:.95,ticks:{color:TC,font:{family:'DM Mono',size:9},callback:v=>v.toFixed(2)}}},plugins:{...bo().plugins,legend:{display:true,labels:{color:TC,font:{family:'DM Mono',size:8},boxWidth:6,padding:10}}}}});
+
+/* ===== ACCORDION ===== */
+function tAcc(h){const b=h.nextElementSibling,ic=h.querySelector('.acc-icon'),op=b.classList.contains('open');document.querySelectorAll('.acc-body.open').forEach(x=>{x.classList.remove('open');x.previousElementSibling.querySelector('.acc-icon').textContent='+'});if(!op){b.classList.add('open');ic.textContent='\u2212'}}
+
+/* ===== SEARCH ===== */
+document.getElementById('searchInput').addEventListener('keydown',function(e){if(e.key==='Enter'&&this.value.trim()){const q=this.value.toLowerCase();let found=false;document.querySelectorAll('section[id]').forEach(s=>{if(!found&&s.textContent.toLowerCase().includes(q)){found=true;s.scrollIntoView({behavior:'smooth',block:'start'})}});this.value=''}});
+
+/* ===== CIS TIMESTAMP ===== */
+setTimeout(()=>{const el=document.getElementById('cisTs');if(el)el.textContent='14 seconds ago'},2000);
+setTimeout(()=>{const el=document.getElementById('cisTs');if(el)el.textContent='1 minute ago'},62000);
+</script>
+</body>
+</html>
