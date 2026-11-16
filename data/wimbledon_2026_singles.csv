@@ -1,0 +1,12 @@
+round,players_per_draw,prize_gbp
+Champion,1,3600000
+Runner-up,1,1800000
+Semi-finalist,2,900000
+Quarter-finalist,4,480000
+Fourth round,8,300000
+Third round,16,185000
+Second round,32,126000
+First round,64,80000
+Qualifying third round,16,50000
+Qualifying second round,32,32000
+Qualifying first round,64,20000
